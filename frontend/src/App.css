@@ -26,3 +26,45 @@
 .markdown-body table {
   margin-bottom: 16px;
 }
+
+.markdown-body.theme-github-dark {
+  color: #c9d1d9;
+  background: #0d1117;
+}
+
+.markdown-body.theme-github-dark a {
+  color: #58a6ff;
+}
+
+.markdown-body.theme-github-dark code,
+.markdown-body.theme-github-dark pre {
+  background: #161b22;
+}
+
+.markdown-body.theme-github-dark table tr {
+  background: #0d1117;
+}
+
+.markdown-body.theme-github-dark blockquote {
+  border-left-color: #30363d;
+  color: #8b949e;
+}
+
+.markdown-body.theme-github-sepia {
+  color: #5f4b32;
+  background: #f7efdd;
+}
+
+.markdown-body.theme-github-sepia a {
+  color: #8a5f1f;
+}
+
+.markdown-body.theme-github-sepia code,
+.markdown-body.theme-github-sepia pre {
+  background: #f0e5cc;
+}
+
+.markdown-body.theme-github-sepia blockquote {
+  border-left-color: #c4aa70;
+  color: #6e5a3e;
+}
