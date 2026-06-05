@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, MouseEvent, useEffect, useState } from "react";
 import { EventsOff, EventsOn } from "../wailsjs/runtime";
 import { LoadMarkdown } from "../wailsjs/go/main/App";
 import "github-markdown-css/github-markdown.css";
@@ -12,6 +12,12 @@ type PreviewPayload = {
 	error?: string;
 };
 
+type TocItem = {
+	id: string;
+	text: string;
+	level: number;
+};
+
 type ThemeName = "github-light" | "github-dark" | "github-sepia";
 
 type Theme = {
@@ -19,6 +25,8 @@ type Theme = {
 	label: string;
 	description: string;
 };
+
+const fallbackMarkup = "<p>No preview content.</p>";
 
 const themes: Theme[] = [
 	{ name: "github-light", label: "GitHub Light", description: "Default style, close to the GitHub light reading theme." },
@@ -29,6 +37,61 @@ const themes: Theme[] = [
 const statusUnknown = "Loading preview...";
 const themeStorageKey = "md-preview.theme";
 
+function slugifyHeading(text: string, fallbackIndex: number): string {
+	const base = text
+		.trim()
+		.toLowerCase()
+		.replace(/[^\w\u4e00-\u9fa5]+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.replace(/-+/g, "-");
+
+	if (!base) {
+		return `heading-${fallbackIndex}`;
+	}
+	return base;
+}
+
+function extractTocAndNormalizeHtml(rawHtml: string): { html: string; toc: TocItem[] } {
+	if (!rawHtml) {
+		return { html: fallbackMarkup, toc: [] };
+	}
+
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(rawHtml, "text/html");
+	const used = new Map<string, number>();
+	const headings = Array.from(doc.querySelectorAll("h1, h2, h3, h4, h5, h6"));
+	const toc: TocItem[] = [];
+
+	headings.forEach((heading, index) => {
+		const idSource = heading.getAttribute("id") || heading.textContent || "";
+		let id = heading.getAttribute("id");
+		if (!id || !id.trim()) {
+			id = slugifyHeading(idSource, index);
+		}
+
+		const unique = `${id}-${(used.get(id) || 0) + 1}`;
+		const finalId = used.get(id) ? unique : id;
+		used.set(id, (used.get(id) || 0) + 1);
+		heading.setAttribute("id", finalId);
+
+		const text = heading.textContent?.trim() || "";
+		const level = Number(heading.tagName.substring(1));
+
+		if (text) {
+			toc.push({
+				id: finalId,
+				text,
+				level,
+			});
+		}
+	});
+
+	return {
+		html: doc.body ? doc.body.innerHTML : rawHtml,
+		toc,
+	};
+}
+
 function App() {
 	const [payload, setPayload] = useState<PreviewPayload>({
 		filePath: "",
@@ -36,11 +99,26 @@ function App() {
 		version: "",
 		renderedAt: "",
 	});
+	const [contentHtml, setContentHtml] = useState(fallbackMarkup);
 	const [busy, setBusy] = useState(true);
 	const [theme, setTheme] = useState<ThemeName>(() => {
 		const saved = window.localStorage.getItem(themeStorageKey) as ThemeName | null;
 		return saved === "github-dark" || saved === "github-sepia" || saved === "github-light" ? saved : "github-light";
 	});
+	const [toc, setToc] = useState<TocItem[]>([]);
+
+	const applyPayload = (next: PreviewPayload) => {
+		setPayload(next);
+		if (next.error) {
+			setContentHtml(fallbackMarkup);
+			setToc([]);
+			return;
+		}
+
+		const normalized = extractTocAndNormalizeHtml(next.html || "");
+		setContentHtml(normalized.html);
+		setToc(normalized.toc);
+	};
 
 	useEffect(() => {
 		let mounted = true;
@@ -51,12 +129,16 @@ function App() {
 				if (!mounted) {
 					return;
 				}
-				setPayload(next);
+				applyPayload(next);
 			} catch {
-				setPayload((current) => ({
-					...current,
-					error: "Failed to load Markdown preview. Check the file path and permissions.",
-				}));
+				if (mounted) {
+					setPayload((current) => ({
+						...current,
+						error: "Failed to load Markdown preview. Check the file path and permissions.",
+					}));
+					setContentHtml(fallbackMarkup);
+					setToc([]);
+				}
 			} finally {
 				if (mounted) {
 					setBusy(false);
@@ -66,7 +148,7 @@ function App() {
 
 		const handleUpdate = (next: PreviewPayload) => {
 			if (mounted) {
-				setPayload(next);
+				applyPayload(next);
 			}
 		};
 
@@ -88,9 +170,17 @@ function App() {
 		setTheme(event.target.value as ThemeName);
 	};
 
+	const onTocNavigation = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
+		event.preventDefault();
+		const target = document.getElementById(id);
+		if (target) {
+			target.scrollIntoView({ behavior: "smooth", block: "start" });
+		}
+	};
+
 	return (
 		<div className={`min-h-screen transition-colors duration-200 md-preview-root theme-shell-${theme}`}>
-			<div className="mx-auto flex max-w-[1100px] flex-col gap-4 p-4">
+			<div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-4">
 				<header className="md-preview-header">
 					<h1 className="truncate text-lg font-semibold md-preview-title">
 						{payload.filePath || "Markdown Preview"}
@@ -127,12 +217,32 @@ function App() {
 					</div>
 				) : null}
 
-				<section className="md-preview-panel">
-					<div
-						className={`markdown-body theme-${theme}`}
-						dangerouslySetInnerHTML={{ __html: payload.html || "<p>No preview content.</p>" }}
-					/>
-				</section>
+				<div className="md-preview-content-layout">
+					<section className="md-preview-panel md-preview-main-panel">
+						<div className={`markdown-body theme-${theme}`} dangerouslySetInnerHTML={{ __html: contentHtml }} />
+					</section>
+
+					{toc.length > 0 ? (
+						<aside className="md-preview-toc md-preview-panel">
+							<h2 className="mb-3 text-sm font-semibold">Table of Contents</h2>
+							<nav aria-label="Table of contents">
+								<ul className="space-y-1">
+									{toc.map((item) => (
+										<li key={item.id} style={{ paddingLeft: `${Math.max(item.level - 1, 0) * 0.75}rem` }}>
+											<a
+												href={`#${item.id}`}
+												onClick={(event) => onTocNavigation(event, item.id)}
+												className="md-preview-subtle text-sm"
+											>
+												{item.text}
+											</a>
+										</li>
+									))}
+								</ul>
+							</nav>
+						</aside>
+					) : null}
+				</div>
 			</div>
 		</div>
 	);
