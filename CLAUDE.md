@@ -19,6 +19,21 @@ The tool is for fast local reading. It should show rendered content, not Markdow
 - Uses GitHub-style Markdown extensions where practical.
 - Uses GitHub-like CSS as the built-in default theme.
 
+## Current Implementation
+
+- `main.go` contains the CLI entry point, argument parsing, file validation, Markdown rendering, HTTP handlers, browser launching, and the built-in page template.
+- `main_test.go` covers argument parsing, file validation errors, GFM rendering, HTML sanitization, and HTTP handler behavior.
+- Markdown rendering uses `github.com/yuin/goldmark` with `extension.GFM`.
+- Rendered HTML is sanitized with `github.com/microcosm-cc/bluemonday`.
+- Browser refresh uses a lightweight page poll to `/status`. When the Markdown file modification version changes, the page reloads.
+- The default bind address is `127.0.0.1:17776`.
+
+## CLI Options
+
+```text
+Usage: md-preview [--host 127.0.0.1] [--port 17776] [--no-open] [--watch=false] <file.md>
+```
+
 ## Development Principles
 
 - Keep the tool small and dependency-light.
@@ -32,8 +47,15 @@ The tool is for fast local reading. It should show rendered content, not Markdow
 - `go test ./...` passes.
 - `go run . README.md` starts a preview server.
 - The rendered page looks close to GitHub Markdown: readable width, GitHub-ish typography, tables, code blocks, blockquotes, task lists.
-- Missing file and non-Markdown file errors are clear.
-- Browser refresh works after editing the file, or the implementation documents a simpler manual refresh fallback.
+- Missing file, directory input, non-Markdown extension, and occupied port errors are clear.
+- Browser refresh works through lightweight polling while `--watch` is enabled.
+
+## Verification
+
+```bash
+go test ./...
+go run . --no-open --port 0 README.md
+```
 
 ## Commit Message Style
 
