@@ -4,4 +4,10 @@ import {main} from '../models';
 
 export function CurrentVersion():Promise<string>;
 
+export function ExportHTML(arg1:string,arg2:string):Promise<string>;
+
+export function ExportMarkdown(arg1:string):Promise<string>;
+
 export function LoadMarkdown():Promise<main.previewPayload>;
+
+export function PrintPreview():Promise<void>;

@@ -130,6 +130,71 @@ func TestCurrentVersion(t *testing.T) {
 	}
 }
 
+func TestExportHTMLWritesFileWithThemeAndSanitization(t *testing.T) {
+	dir := t.TempDir()
+	md := filepath.Join(dir, "note.md")
+	content := strings.Join([]string{
+		"# Note",
+		"",
+		"```go",
+		"fmt.Println(\"x\")",
+		"```",
+		"",
+		"<script>console.log(\"x\")</script>",
+	}, "\n")
+	if err := os.WriteFile(md, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outputPath, err := app.ExportHTML("", "github-dark")
+	if err != nil {
+		t.Fatalf("expected export success: %v", err)
+	}
+	defer os.Remove(outputPath)
+
+	raw, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("expected exported file: %v", err)
+	}
+
+	exported := string(raw)
+	if !strings.Contains(exported, `class="markdown-body theme-github-dark"`) {
+		t.Fatalf("expected exported theme class, got: %s", exported)
+	}
+	if !strings.Contains(exported, "<h1") {
+		t.Fatalf("expected rendered heading in export")
+	}
+	if strings.Contains(strings.ToLower(exported), "<script") {
+		t.Fatalf("expected script to be sanitized")
+	}
+
+	expected, err := filepath.Abs(filepath.Join(dir, "note-preview.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if outputPath != expected {
+		t.Fatalf("expected default export path %q, got %q", expected, outputPath)
+	}
+}
+
+func TestResolveExportPathRejectsBadDirectory(t *testing.T) {
+	dir := t.TempDir()
+	md := filepath.Join(dir, "note.md")
+	if err := os.WriteFile(md, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	badDir := filepath.Join(dir, "missing", "path.html")
+	if _, err := resolveExportPath(md, badDir); err == nil {
+		t.Fatalf("expected error for missing output directory")
+	}
+}
+
 func TestStateSignatureIsDeterministic(t *testing.T) {
 	payload := previewPayload{
 		FilePath:   "/tmp/a.md",

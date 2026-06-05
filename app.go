@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -17,7 +18,7 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
-	ghtml "github.com/yuin/goldmark/renderer/html"
+	gfmhtml "github.com/yuin/goldmark/renderer/html"
 )
 
 type previewPayload struct {
@@ -42,6 +43,140 @@ type App struct {
 	lastStateKey string
 	stateMu      sync.Mutex
 }
+
+const exportHTMLTemplate = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>%s</title>
+<style>
+  :root {
+    color-scheme: light dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 2rem;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .markdown-body {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  .markdown-body,
+  .markdown-body a,
+  .markdown-body code,
+  .markdown-body pre {
+    color: #24292f;
+    background: #fff;
+  }
+
+  .markdown-body p,
+  .markdown-body ul,
+  .markdown-body ol,
+  .markdown-body blockquote,
+  .markdown-body table {
+    margin-top: 0;
+    margin-bottom: 1rem;
+  }
+
+  .markdown-body a {
+    color: #0969da;
+    text-decoration: none;
+  }
+
+  .markdown-body a:hover {
+    text-decoration: underline;
+  }
+
+  .markdown-body pre,
+  .markdown-body code {
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+  }
+
+  .markdown-body pre {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow: auto;
+    border: 1px solid #d0d7de;
+    background: #f6f8fa;
+    margin-bottom: 1rem;
+  }
+
+  .markdown-body hr {
+    border: 0;
+    border-top: 1px solid #d8dee4;
+    margin: 1.5rem 0;
+  }
+
+  .markdown-body.theme-github-dark,
+  .markdown-body.theme-github-dark a,
+  .markdown-body.theme-github-dark code,
+  .markdown-body.theme-github-dark pre {
+    color: #c9d1d9;
+    background: #0d1117;
+  }
+
+  .markdown-body.theme-github-dark {
+    color: #c9d1d9;
+  }
+
+  .markdown-body.theme-github-dark a {
+    color: #58a6ff;
+  }
+
+  .markdown-body.theme-github-dark pre {
+    border-color: #30363d;
+    background: #161b22;
+  }
+
+  .markdown-body.theme-github-sepia,
+  .markdown-body.theme-github-sepia a,
+  .markdown-body.theme-github-sepia code,
+  .markdown-body.theme-github-sepia pre {
+    color: #5f4b32;
+    background: #f7efdd;
+  }
+
+  .markdown-body.theme-github-sepia {
+    color: #5f4b32;
+  }
+
+  .markdown-body.theme-github-sepia a {
+    color: #8a5f1f;
+  }
+
+  .markdown-body.theme-github-sepia pre {
+    border: 1px solid rgba(132, 102, 56, 0.35);
+    background: #ead5a7;
+  }
+
+  .markdown-body table {
+    border-collapse: collapse;
+    width: 100%%;
+    margin-bottom: 1rem;
+  }
+
+  .markdown-body th,
+  .markdown-body td {
+    border: 1px solid #d8dee4;
+    padding: 0.5rem;
+  }
+</style>
+</head>
+<body>
+<article class="markdown-body theme-%s">%s</article>
+</body>
+</html>`
 
 // NewApp creates a new App application struct.
 func NewApp(cfg config) (*App, error) {
@@ -148,6 +283,80 @@ func (a *App) renderMarkdown() previewPayload {
 	}
 }
 
+func (a *App) ExportHTML(path string, theme string) (string, error) {
+	payload := a.renderMarkdown()
+	if payload.Error != "" {
+		return "", fmt.Errorf("cannot export Markdown: %s", payload.Error)
+	}
+
+	target, err := resolveExportPath(a.cfg.File, path)
+	if err != nil {
+		return "", err
+	}
+
+	body := payload.HTML
+	themeClass := sanitizeTheme(theme)
+	title := html.EscapeString(filepath.Base(a.cfg.File))
+	output := fmt.Sprintf(exportHTMLTemplate, title, themeClass, body)
+
+	if err := os.WriteFile(target, []byte(output), 0o644); err != nil {
+		return "", fmt.Errorf("failed to write export file: %w", err)
+	}
+	return target, nil
+}
+
+func (a *App) ExportMarkdown(path string) (string, error) {
+	return a.ExportHTML(path, "github-light")
+}
+
+func (a *App) PrintPreview() {
+	runtime.WindowPrint(a.ctx)
+}
+
+func resolveExportPath(sourcePath, requestedPath string) (string, error) {
+	target := strings.TrimSpace(requestedPath)
+	if target == "" {
+		dir := filepath.Dir(sourcePath)
+		name := filepath.Base(sourcePath)
+		target = filepath.Join(dir, strings.TrimSuffix(name, filepath.Ext(name))+"-preview.html")
+	}
+
+	target = filepath.Clean(target)
+	if filepath.Ext(target) == "" {
+		target = target + ".html"
+	}
+
+	absPath, err := filepath.Abs(target)
+	if err != nil {
+		return "", fmt.Errorf("cannot resolve output path: %w", err)
+	}
+
+	if info, err := os.Stat(absPath); err == nil && info.IsDir() {
+		return "", fmt.Errorf("output path is a directory: %s", absPath)
+	}
+
+	parent := filepath.Dir(absPath)
+	if parentInfo, err := os.Stat(parent); err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("output directory does not exist: %s", parent)
+		}
+		return "", fmt.Errorf("cannot access output directory %s: %w", parent, err)
+	} else if !parentInfo.IsDir() {
+		return "", fmt.Errorf("output directory is not a directory: %s", parent)
+	}
+
+	return absPath, nil
+}
+
+func sanitizeTheme(theme string) string {
+	switch strings.ToLower(strings.TrimSpace(theme)) {
+	case "github-dark", "github-sepia":
+		return theme
+	default:
+		return "github-light"
+	}
+}
+
 type byteBuffer struct {
 	builder *strings.Builder
 }
@@ -187,7 +396,7 @@ func newRenderer() goldmark.Markdown {
 	return goldmark.New(
 		goldmark.WithExtensions(extension.GFM),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
-		goldmark.WithRendererOptions(ghtml.WithXHTML()),
+		goldmark.WithRendererOptions(gfmhtml.WithXHTML()),
 	)
 }
 

@@ -1,7 +1,23 @@
-import { ChangeEvent, MouseEvent, useEffect, useState } from "react";
+import { ChangeEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import { EventsOff, EventsOn } from "../wailsjs/runtime";
-import { LoadMarkdown } from "../wailsjs/go/main/App";
+import { ExportHTML, LoadMarkdown, PrintPreview } from "../wailsjs/go/main/App";
 import "github-markdown-css/github-markdown.css";
+import Prism from "prismjs";
+import "prismjs/components/prism-clike";
+import "prismjs/components/prism-cpp";
+import "prismjs/components/prism-css";
+import "prismjs/components/prism-go";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-javascript";
+import "prismjs/components/prism-markdown";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-sql";
+import "prismjs/components/prism-bash";
+import "prismjs/components/prism-yaml";
+import "prismjs/components/prism-diff";
+import "prismjs/themes/prism.css";
+import "prismjs/plugins/line-numbers/prism-line-numbers";
+import "prismjs/plugins/line-numbers/prism-line-numbers.css";
 import "./App.css";
 
 type PreviewPayload = {
@@ -25,6 +41,8 @@ type Theme = {
 	label: string;
 	description: string;
 };
+
+type CodeBlockLanguage = string;
 
 const fallbackMarkup = "<p>No preview content.</p>";
 
@@ -92,6 +110,31 @@ function extractTocAndNormalizeHtml(rawHtml: string): { html: string; toc: TocIt
 	};
 }
 
+function readCodeLanguage(codeBlock: HTMLElement): CodeBlockLanguage | null {
+	const className = codeBlock.getAttribute("class") || "";
+	const match = className.match(/language-([\w-]+)/i);
+	if (!match) {
+		return null;
+	}
+	return match[1].toLowerCase();
+}
+
+function getLanguageLabel(codeBlock: HTMLElement): string {
+	const language = readCodeLanguage(codeBlock);
+	return language ? language.toUpperCase() : "";
+}
+
+function defaultExportPath(filePath: string): string {
+	const fallback = "document-preview.html";
+	const trimmed = filePath.trim();
+	if (!trimmed) {
+		return fallback;
+	}
+
+	const base = trimmed.replace(/\.markdown$/i, "").replace(/\.md$/i, "");
+	return `${base}-preview.html`;
+}
+
 function App() {
 	const [payload, setPayload] = useState<PreviewPayload>({
 		filePath: "",
@@ -106,6 +149,8 @@ function App() {
 		return saved === "github-dark" || saved === "github-sepia" || saved === "github-light" ? saved : "github-light";
 	});
 	const [toc, setToc] = useState<TocItem[]>([]);
+	const [actionMessage, setActionMessage] = useState("");
+	const previewRef = useRef<HTMLDivElement | null>(null);
 
 	const applyPayload = (next: PreviewPayload) => {
 		setPayload(next);
@@ -166,6 +211,48 @@ function App() {
 		window.localStorage.setItem(themeStorageKey, theme);
 	}, [theme]);
 
+	useEffect(() => {
+		const root = previewRef.current;
+		if (!root) {
+			return;
+		}
+
+		const blocks = Array.from(root.querySelectorAll("pre > code")).map((node) => node as HTMLElement);
+		blocks.forEach((codeBlock) => {
+			const pre = codeBlock.parentElement;
+			if (!pre) {
+				return;
+			}
+
+			pre.classList.add("line-numbers", "md-code-block");
+			if (!pre.querySelector(".md-code-copy")) {
+				const copyButton = document.createElement("button");
+				const language = getLanguageLabel(codeBlock);
+				copyButton.type = "button";
+				copyButton.className = "md-code-copy";
+				copyButton.textContent = language ? `${language} Copy` : "Copy";
+				pre.appendChild(copyButton);
+
+				copyButton.addEventListener("click", async () => {
+					try {
+						await navigator.clipboard.writeText(codeBlock.textContent || "");
+						copyButton.textContent = "Copied";
+						window.setTimeout(() => {
+							copyButton.textContent = language ? `${language} Copy` : "Copy";
+						}, 1200);
+					} catch {
+						copyButton.textContent = "Failed";
+						window.setTimeout(() => {
+							copyButton.textContent = language ? `${language} Copy` : "Copy";
+						}, 1200);
+					}
+				});
+			}
+		});
+
+		Prism.highlightAllUnder(root);
+	}, [contentHtml]);
+
 	const onThemeChange = (event: ChangeEvent<HTMLSelectElement>) => {
 		setTheme(event.target.value as ThemeName);
 	};
@@ -175,6 +262,37 @@ function App() {
 		const target = document.getElementById(id);
 		if (target) {
 			target.scrollIntoView({ behavior: "smooth", block: "start" });
+		}
+	};
+
+	const exportCurrentHtml = async () => {
+		if (!payload.filePath) {
+			setActionMessage("Open a Markdown file before exporting.");
+			return;
+		}
+
+		const suggestedPath = defaultExportPath(payload.filePath);
+		const target = window.prompt("Export HTML to path", suggestedPath);
+		if (target === null || !target.trim()) {
+			return;
+		}
+
+		try {
+			const saved = await ExportHTML(target, theme);
+			setActionMessage(`Exported HTML to: ${saved}`);
+		} catch (err) {
+			const message = err instanceof Error ? err.message : "Export failed";
+			setActionMessage(message);
+		}
+	};
+
+	const printToPDF = async () => {
+		try {
+			await PrintPreview();
+			setActionMessage("Print dialog opened. Choose Save as PDF to export PDF.");
+		} catch (err) {
+			const message = err instanceof Error ? err.message : "Print failed";
+			setActionMessage(message);
 		}
 	};
 
@@ -209,6 +327,23 @@ function App() {
 							{themes.find((item) => item.name === theme)?.description}
 						</p>
 					</div>
+					<div className="mt-3 flex flex-wrap items-center gap-2">
+						<button
+							type="button"
+							onClick={exportCurrentHtml}
+							className="rounded-md border px-3 py-1.5 text-sm font-medium md-preview-select"
+						>
+							Export HTML
+						</button>
+						<button
+							type="button"
+							onClick={printToPDF}
+							className="rounded-md border px-3 py-1.5 text-sm font-medium md-preview-select"
+						>
+							Export PDF
+						</button>
+					</div>
+					{actionMessage ? <p className="mt-2 text-xs md-preview-subtle">{actionMessage}</p> : null}
 				</header>
 
 				{payload.error ? (
@@ -219,7 +354,7 @@ function App() {
 
 				<div className="md-preview-content-layout">
 					<section className="md-preview-panel md-preview-main-panel">
-						<div className={`markdown-body theme-${theme}`} dangerouslySetInnerHTML={{ __html: contentHtml }} />
+						<div ref={previewRef} className={`markdown-body theme-${theme}`} dangerouslySetInnerHTML={{ __html: contentHtml }} />
 					</section>
 
 					{toc.length > 0 ? (
@@ -229,11 +364,7 @@ function App() {
 								<ul className="space-y-1">
 									{toc.map((item) => (
 										<li key={item.id} style={{ paddingLeft: `${Math.max(item.level - 1, 0) * 0.75}rem` }}>
-											<a
-												href={`#${item.id}`}
-												onClick={(event) => onTocNavigation(event, item.id)}
-												className="md-preview-subtle text-sm"
-											>
+											<a href={`#${item.id}`} onClick={(event) => onTocNavigation(event, item.id)} className="md-preview-subtle text-sm">
 												{item.text}
 											</a>
 										</li>

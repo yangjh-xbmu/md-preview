@@ -6,6 +6,18 @@ export function CurrentVersion() {
   return window['go']['main']['App']['CurrentVersion']();
 }
 
+export function ExportHTML(arg1, arg2) {
+  return window['go']['main']['App']['ExportHTML'](arg1, arg2);
+}
+
+export function ExportMarkdown(arg1) {
+  return window['go']['main']['App']['ExportMarkdown'](arg1);
+}
+
 export function LoadMarkdown() {
   return window['go']['main']['App']['LoadMarkdown']();
+}
+
+export function PrintPreview() {
+  return window['go']['main']['App']['PrintPreview']();
 }

@@ -128,6 +128,41 @@
   font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
 }
 
+.markdown-body pre {
+  position: relative;
+}
+
+.markdown-body pre.md-code-block {
+  margin-bottom: 1rem;
+}
+
+.md-code-copy {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  background: rgba(0, 0, 0, 0.08);
+  color: inherit;
+  font-size: 0.75rem;
+  line-height: 1.1;
+  padding: 0.28rem 0.5rem;
+  cursor: pointer;
+}
+
+.md-preview-root.theme-shell-github-dark .md-code-copy,
+.md-preview-root.theme-shell-github-sepia .md-code-copy {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.md-code-copy:hover {
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.md-code-copy:active {
+  transform: translateY(1px);
+}
+
 .markdown-body details {
   margin-bottom: 16px;
 }
