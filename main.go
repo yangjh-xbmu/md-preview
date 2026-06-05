@@ -48,8 +48,11 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 
-	if err := validateMarkdownFile(cfg.File); err != nil {
-		return err
+	if cfg.File != "" {
+		if err := validateMarkdownFile(cfg.File); err != nil {
+			fmt.Fprintln(stderr, err)
+			cfg.File = ""
+		}
 	}
 
 	if cfg.UseBrowser {
