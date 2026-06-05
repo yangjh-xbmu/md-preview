@@ -1,11 +1,10 @@
-// INPUT: Command-line arguments and a local Markdown file.
-// OUTPUT: A local HTTP preview server that renders GitHub-style Markdown HTML.
+// INPUT: A local Markdown file path.
+// OUTPUT: A local preview. Desktop view is the default, browser mode is optional.
 // POS: CLI entry point and preview server implementation for md-preview.
 package main
 
 import (
 	"bytes"
-	_ "embed"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -21,7 +20,13 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
@@ -35,11 +40,12 @@ const defaultPort = 17776
 var errHelp = errors.New("help requested")
 
 type config struct {
-	File  string
-	Host  string
-	Port  int
-	Open  bool
-	Watch bool
+	File       string
+	Host       string
+	Port       int
+	Open       bool
+	Watch      bool
+	UseBrowser bool
 }
 
 type previewServer struct {
@@ -82,22 +88,11 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 
-	listener, err := net.Listen("tcp", net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port)))
-	if err != nil {
-		return fmt.Errorf("port %d on host %s is not available: %w", cfg.Port, cfg.Host, err)
+	if !cfg.UseBrowser {
+		return runDesktopViewer(cfg, stdout, stderr)
 	}
 
-	srv := newPreviewServer(cfg)
-	url := "http://" + listener.Addr().String() + "/"
-	fmt.Fprintf(stdout, "Previewing %s at %s\n", cfg.File, url)
-
-	if cfg.Open {
-		if err := openBrowser(url); err != nil {
-			fmt.Fprintf(stderr, "Could not open browser automatically. Open this URL manually: %s\n", url)
-		}
-	}
-
-	return http.Serve(listener, srv.routes())
+	return runBrowserServer(cfg, stdout, stderr)
 }
 
 func parseArgs(args []string, output io.Writer) (config, error) {
@@ -112,10 +107,11 @@ func parseArgs(args []string, output io.Writer) (config, error) {
 	fs.SetOutput(output)
 	fs.StringVar(&cfg.Host, "host", cfg.Host, "HTTP bind host")
 	fs.IntVar(&cfg.Port, "port", cfg.Port, "HTTP bind port")
-	noOpen := fs.Bool("no-open", false, "print URL without opening the browser")
-	fs.BoolVar(&cfg.Watch, "watch", cfg.Watch, "reload the preview after file changes")
+	fs.BoolVar(&cfg.UseBrowser, "browser", false, "start browser-based preview instead of desktop app")
+	noOpen := fs.Bool("no-open", false, "when browser mode is enabled, do not open a browser automatically")
+	fs.BoolVar(&cfg.Watch, "watch", cfg.Watch, "watch file changes")
 	fs.Usage = func() {
-		fmt.Fprintln(output, "Usage: md-preview [--host 127.0.0.1] [--port 17776] [--no-open] [--watch=false] <file.md>")
+		fmt.Fprintln(output, "Usage: md-preview [--browser] [--host 127.0.0.1] [--port 17776] [--no-open] [--watch=false] <file.md>")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -124,10 +120,12 @@ func parseArgs(args []string, output io.Writer) (config, error) {
 		}
 		return cfg, err
 	}
+
 	if fs.NArg() != 1 {
 		fs.Usage()
 		return cfg, fmt.Errorf("expected exactly one Markdown file")
 	}
+
 	if cfg.Port < 0 || cfg.Port > 65535 {
 		return cfg, fmt.Errorf("port must be between 0 and 65535")
 	}
@@ -155,26 +153,132 @@ func validateMarkdownFile(path string) error {
 	return nil
 }
 
-func newPreviewServer(cfg config) *previewServer {
-	return &previewServer{
-		cfg: cfg,
-		markdown: goldmark.New(
-			goldmark.WithExtensions(extension.GFM),
-			goldmark.WithParserOptions(parser.WithAutoHeadingID()),
-			goldmark.WithRendererOptions(ghtml.WithXHTML()),
-		),
-		policy: markdownPolicy(),
-		page:   template.Must(template.New("page").Parse(pageTemplate)),
+func runDesktopViewer(cfg config, stdout, stderr io.Writer) error {
+	_ = stdout
+	absPath, err := filepath.Abs(cfg.File)
+	if err != nil {
+		return fmt.Errorf("cannot resolve file path: %w", err)
 	}
+
+	a := app.New()
+	window := a.NewWindow(fmt.Sprintf("md-preview · %s", filepath.Base(cfg.File)))
+	headerPath := widget.NewLabel(fmt.Sprintf("File: %s", absPath))
+	headerStatus := widget.NewLabel("")
+	rendered := widget.NewRichTextFromMarkdown("")
+	rendered.Wrapping = fyne.TextWrapWord
+	scroll := container.NewScroll(rendered)
+	window.SetContent(container.NewBorder(container.NewVBox(headerPath, headerStatus), nil, nil, nil, scroll))
+	window.Resize(fyne.NewSize(1020, 760))
+
+	update := func() error {
+		source, err := os.ReadFile(cfg.File)
+		if err != nil {
+			return fmt.Errorf("cannot read Markdown file: %w", err)
+		}
+		content := string(source)
+		fyne.Do(func() {
+			rendered.ParseMarkdown(content)
+			rendered.Refresh()
+			headerStatus.SetText(fmt.Sprintf("Generated: %s", time.Now().Format(time.RFC3339)))
+		})
+		return nil
+	}
+
+	if err := update(); err != nil {
+		errText := fmt.Sprintf("Failed to render: %v", err)
+		fyne.Do(func() {
+			headerStatus.SetText(errText)
+		})
+		fmt.Fprintln(stderr, err)
+	}
+
+	version, err := fileVersion(cfg.File)
+	if err != nil {
+		return err
+	}
+
+	if cfg.Watch {
+		headerStatus.SetText("Watching file changes")
+		done := make(chan struct{})
+		ticker := time.NewTicker(time.Second)
+		var closeDone sync.Once
+		closeDoneFunc := func() {
+			closeDone.Do(func() {
+				close(done)
+			})
+		}
+		window.SetCloseIntercept(func() {
+			closeDoneFunc()
+			a.Quit()
+		})
+		go func() {
+			defer ticker.Stop()
+			for {
+				select {
+				case <-done:
+					return
+				case <-ticker.C:
+					next, vErr := fileVersion(cfg.File)
+					if vErr != nil {
+						fyne.Do(func() {
+							headerStatus.SetText(vErr.Error())
+						})
+						continue
+					}
+					if next == version {
+						continue
+					}
+					version = next
+					if err := update(); err != nil {
+						fyne.Do(func() {
+							headerStatus.SetText(err.Error())
+						})
+						fmt.Fprintf(stderr, "reload failed: %v\n", err)
+					}
+				}
+			}
+		}()
+	} else {
+		headerStatus.SetText("Single render mode. Run again to refresh.")
+	}
+
+	window.ShowAndRun()
+	return nil
 }
 
-func markdownPolicy() *bluemonday.Policy {
-	policy := bluemonday.UGCPolicy()
-	policy.AllowElements("input")
-	policy.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
-	policy.AllowAttrs("checked", "disabled").OnElements("input")
-	policy.AllowAttrs("class").Matching(regexp.MustCompile(`^language-[A-Za-z0-9_-]+$`)).OnElements("code")
-	return policy
+func runBrowserServer(cfg config, stdout, stderr io.Writer) error {
+	listener, err := net.Listen("tcp", net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port)))
+	if err != nil {
+		return fmt.Errorf("port %d on host %s is not available: %w", cfg.Port, cfg.Host, err)
+	}
+	srv := newPreviewServer(cfg)
+	url := "http://" + listener.Addr().String() + "/"
+	fmt.Fprintf(stdout, "Previewing %s at %s\n", cfg.File, url)
+
+	if cfg.Open {
+		if err := openBrowser(url); err != nil {
+			fmt.Fprintf(stderr, "Could not open browser automatically. Open this URL manually: %s\n", url)
+		}
+	}
+
+	return http.Serve(listener, srv.routes())
+}
+
+func newRenderer() goldmark.Markdown {
+	return goldmark.New(
+		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
+		goldmark.WithRendererOptions(ghtml.WithXHTML()),
+	)
+}
+
+func newPreviewServer(cfg config) *previewServer {
+	return &previewServer{
+		cfg:      cfg,
+		markdown: newRenderer(),
+		policy:   markdownPolicy(),
+		page:     template.Must(template.New("page").Parse(pageTemplate)),
+	}
 }
 
 func (s *previewServer) routes() http.Handler {
@@ -281,12 +385,21 @@ func openBrowser(url string) error {
 	return cmd.Start()
 }
 
+func markdownPolicy() *bluemonday.Policy {
+	policy := bluemonday.UGCPolicy()
+	policy.AllowElements("input")
+	policy.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
+	policy.AllowAttrs("checked", "disabled").OnElements("input")
+	policy.AllowAttrs("class").Matching(regexp.MustCompile(`^language-[A-Za-z0-9_-]+$`)).OnElements("code")
+	return policy
+}
+
 const pageTemplate = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{.Title}} · md-preview</title>
+  <title>{{.Title}} - md-preview</title>
   <style>
     :root {
       color-scheme: light;
@@ -300,18 +413,15 @@ const pageTemplate = `<!doctype html>
       --danger: #cf222e;
       --code-bg: rgba(175, 184, 193, 0.2);
     }
-
     * {
       box-sizing: border-box;
     }
-
     body {
       margin: 0;
       color: var(--fg);
       background: var(--canvas);
       font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
     }
-
     .topbar {
       position: sticky;
       top: 0;
@@ -326,7 +436,6 @@ const pageTemplate = `<!doctype html>
       border-bottom: 1px solid var(--border);
       backdrop-filter: blur(8px);
     }
-
     .file {
       min-width: 0;
       font-size: 14px;
@@ -335,37 +444,30 @@ const pageTemplate = `<!doctype html>
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-
     .status {
       flex: 0 0 auto;
       font-size: 12px;
       color: var(--fg-muted);
     }
-
     .markdown-body {
       max-width: 980px;
       margin: 0 auto;
       padding: 32px;
       overflow-wrap: break-word;
     }
-
     .markdown-body > *:first-child {
       margin-top: 0 !important;
     }
-
     .markdown-body > *:last-child {
       margin-bottom: 0 !important;
     }
-
     .markdown-body a {
       color: var(--accent);
       text-decoration: none;
     }
-
     .markdown-body a:hover {
       text-decoration: underline;
     }
-
     .markdown-body h1,
     .markdown-body h2,
     .markdown-body h3,
@@ -377,38 +479,30 @@ const pageTemplate = `<!doctype html>
       font-weight: 600;
       line-height: 1.25;
     }
-
     .markdown-body h1,
     .markdown-body h2 {
       padding-bottom: 0.3em;
       border-bottom: 1px solid var(--border-muted);
     }
-
     .markdown-body h1 {
       font-size: 2em;
     }
-
     .markdown-body h2 {
       font-size: 1.5em;
     }
-
     .markdown-body h3 {
       font-size: 1.25em;
     }
-
     .markdown-body h4 {
       font-size: 1em;
     }
-
     .markdown-body h5 {
       font-size: 0.875em;
     }
-
     .markdown-body h6 {
       font-size: 0.85em;
       color: var(--fg-muted);
     }
-
     .markdown-body p,
     .markdown-body blockquote,
     .markdown-body ul,
@@ -420,22 +514,18 @@ const pageTemplate = `<!doctype html>
       margin-top: 0;
       margin-bottom: 16px;
     }
-
     .markdown-body blockquote {
       padding: 0 1em;
       color: var(--fg-muted);
       border-left: 0.25em solid var(--border);
     }
-
     .markdown-body ul,
     .markdown-body ol {
       padding-left: 2em;
     }
-
     .markdown-body li + li {
       margin-top: 0.25em;
     }
-
     .markdown-body table {
       display: block;
       width: max-content;
@@ -444,22 +534,18 @@ const pageTemplate = `<!doctype html>
       border-spacing: 0;
       border-collapse: collapse;
     }
-
     .markdown-body th,
     .markdown-body td {
       padding: 6px 13px;
       border: 1px solid var(--border);
     }
-
     .markdown-body tr {
       background-color: var(--canvas);
       border-top: 1px solid var(--border-muted);
     }
-
     .markdown-body tr:nth-child(2n) {
       background-color: var(--canvas-subtle);
     }
-
     .markdown-body code,
     .markdown-body tt {
       padding: 0.2em 0.4em;
@@ -469,7 +555,6 @@ const pageTemplate = `<!doctype html>
       border-radius: 6px;
       font-family: ui-monospace, SFMono-Regular, SF Mono, Consolas, Liberation Mono, Menlo, monospace;
     }
-
     .markdown-body pre {
       padding: 16px;
       overflow: auto;
@@ -478,7 +563,6 @@ const pageTemplate = `<!doctype html>
       background-color: var(--canvas-subtle);
       border-radius: 6px;
     }
-
     .markdown-body pre code {
       display: inline;
       padding: 0;
@@ -490,12 +574,10 @@ const pageTemplate = `<!doctype html>
       background: transparent;
       border: 0;
     }
-
     .markdown-body img {
       max-width: 100%;
       background-color: var(--canvas);
     }
-
     .markdown-body hr {
       height: 0.25em;
       padding: 0;
@@ -503,12 +585,10 @@ const pageTemplate = `<!doctype html>
       background-color: var(--border);
       border: 0;
     }
-
     .markdown-body input[type="checkbox"] {
       margin: 0 0.2em 0.25em -1.4em;
       vertical-align: middle;
     }
-
     .error {
       max-width: 980px;
       margin: 24px auto 0;
@@ -519,7 +599,6 @@ const pageTemplate = `<!doctype html>
       border-radius: 6px;
       font-size: 14px;
     }
-
     @media (max-width: 720px) {
       .topbar {
         align-items: flex-start;

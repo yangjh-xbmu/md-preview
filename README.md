@@ -2,7 +2,8 @@
 
 Quickly preview Markdown files as rendered HTML with GitHub-style styling.
 
-`md-preview` starts a local HTTP server, renders a Markdown file with GitHub Flavored Markdown support, and opens the preview in your default browser.
+`md-preview` starts a desktop app by default to show rendered Markdown in a local window.
+Optionally, you can use `--browser` to run the original local HTML preview server.
 
 ## Prerequisites
 
@@ -32,26 +33,28 @@ During development:
 go run . README.md
 ```
 
-By default the server binds to `127.0.0.1:17776`, opens the preview page automatically, and refreshes the browser when the Markdown file changes.
+By default, the tool opens a local desktop preview window and refreshes content when the Markdown file changes.
 
 ## Options
 
 ```text
-Usage: md-preview [--host 127.0.0.1] [--port 17776] [--no-open] [--watch=false] <file.md>
+Usage: md-preview [--browser] [--host 127.0.0.1] [--port 17776] [--no-open] [--watch=false] <file.md>
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--host` | `127.0.0.1` | HTTP bind host. Use another value only when you intentionally want a wider bind address. |
+| `--browser` | `false` | Start the browser-based preview mode. |
+| `--host` | `127.0.0.1` | HTTP bind host for browser mode. Use another value only when you intentionally want a wider bind address. |
 | `--port` | `17776` | HTTP bind port. Use `0` to let the OS choose an available port. |
 | `--no-open` | `false` | Print the preview URL without opening the browser. |
 | `--watch` | `true` | Poll the file modification status from the page and reload after changes. |
 
 ## Rendering
 
-The renderer uses `github.com/yuin/goldmark` with GitHub Flavored Markdown extensions. The generated HTML is sanitized with `github.com/microcosm-cc/bluemonday`, so arbitrary scripts are not enabled by default.
+Desktop mode uses `fyne.io/fyne/v2` for a native window and live refreshes rendered markdown.
+Browser mode renders HTML with `github.com/yuin/goldmark` and sanitizes generated HTML with `github.com/microcosm-cc/bluemonday`.
 
-The built-in theme is local CSS that follows GitHub Markdown conventions for page width, headings, tables, code blocks, blockquotes, lists, and task lists.
+Desktop output is plain Markdown rendering, while browser output shows full GitHub-style HTML.
 
 ## Common Problems
 
@@ -62,6 +65,7 @@ The built-in theme is local CSS that follows GitHub Markdown conventions for pag
 `unsupported file extension`: use `.md` or `.markdown`.
 
 `port 17776 on host 127.0.0.1 is not available`: choose another port with `--port`, or stop the process already using that port.
+`Could not open browser automatically`: usually means default browser launcher is unavailable.
 
 ## License
 
