@@ -140,8 +140,23 @@
 }
 
 .markdown-body.theme-github-sepia code,
+.markdown-body.theme-github-sepia pre,
+.markdown-body.theme-github-sepia pre code {
+  background: #ead5a7;
+  color: #3f2f18;
+}
+
 .markdown-body.theme-github-sepia pre {
-  background: #f0e5cc;
+  border: 1px solid rgba(132, 102, 56, 0.35);
+}
+
+.markdown-body.theme-github-sepia pre code {
+  background: transparent;
+  color: #3f2f18;
+}
+
+.markdown-body.theme-github-sepia .highlight {
+  background: transparent;
 }
 
 .markdown-body.theme-github-sepia blockquote {
