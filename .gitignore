@@ -1,0 +1,24 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Go
+bin/
+dist/
+coverage.out
+*.test
+md-preview
+md-preview.exe
+
+# Codex handoff
+.codex-handoffs/
