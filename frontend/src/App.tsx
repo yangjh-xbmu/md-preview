@@ -21,9 +21,9 @@ type Theme = {
 };
 
 const themes: Theme[] = [
-	{ name: "github-light", label: "GitHub Light", description: "默认，接近 GitHub 官方阅读风格" },
-	{ name: "github-dark", label: "GitHub Dark", description: "偏暗，适合低亮环境阅读" },
-	{ name: "github-sepia", label: "Sepia", description: "纸张风格，适合长文阅读" },
+	{ name: "github-light", label: "GitHub Light", description: "Default style, close to the GitHub light reading theme." },
+	{ name: "github-dark", label: "GitHub Dark", description: "Dark mode with stronger contrast for low-light conditions." },
+	{ name: "github-sepia", label: "GitHub Sepia", description: "Warm, paper-like theme for long-form reading." },
 ];
 
 const statusUnknown = "Loading preview...";
@@ -39,7 +39,7 @@ function App() {
 	const [busy, setBusy] = useState(true);
 	const [theme, setTheme] = useState<ThemeName>(() => {
 		const saved = window.localStorage.getItem(themeStorageKey) as ThemeName | null;
-		return saved === "github-dark" || saved === "github-sepia" ? saved : "github-light";
+		return saved === "github-dark" || saved === "github-sepia" || saved === "github-light" ? saved : "github-light";
 	});
 
 	useEffect(() => {
@@ -89,25 +89,25 @@ function App() {
 	};
 
 	return (
-		<div className="min-h-screen bg-slate-100 text-slate-900 transition-colors duration-200">
+		<div className={`min-h-screen transition-colors duration-200 md-preview-root theme-shell-${theme}`}>
 			<div className="mx-auto flex max-w-[1100px] flex-col gap-4 p-4">
-				<header className="rounded-xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-slate-900/5 backdrop-blur">
-					<h1 className="truncate text-lg font-semibold text-slate-900">
+				<header className="md-preview-header">
+					<h1 className="truncate text-lg font-semibold md-preview-title">
 						{payload.filePath || "Markdown Preview"}
 					</h1>
-					<p className="mt-1 text-sm text-slate-500">
+					<p className="mt-1 text-sm md-preview-subtle">
 						{busy ? statusUnknown : `Preview version ${payload.version || "N/A"}`}
 						{payload.renderedAt ? ` Updated ${payload.renderedAt}` : ""}
 					</p>
 					<div className="mt-3 flex items-center gap-2">
-						<label className="text-sm text-slate-600" htmlFor="theme-select">
+						<label className="text-sm md-preview-subtle" htmlFor="theme-select">
 							Theme
 						</label>
 						<select
 							id="theme-select"
 							value={theme}
 							onChange={onThemeChange}
-							className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900"
+							className="rounded-md border px-2 py-1 text-sm md-preview-select"
 						>
 							{themes.map((item) => (
 								<option key={item.name} value={item.name}>
@@ -115,7 +115,9 @@ function App() {
 								</option>
 							))}
 						</select>
-						<p className="text-xs text-slate-500">{themes.find((item) => item.name === theme)?.description}</p>
+						<p className="text-xs md-preview-subtle">
+							{themes.find((item) => item.name === theme)?.description}
+						</p>
 					</div>
 				</header>
 
@@ -125,7 +127,7 @@ function App() {
 					</div>
 				) : null}
 
-				<section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+				<section className="md-preview-panel">
 					<div
 						className={`markdown-body theme-${theme}`}
 						dangerouslySetInnerHTML={{ __html: payload.html || "<p>No preview content.</p>" }}

@@ -1,3 +1,83 @@
+.md-preview-root {
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.md-preview-root.theme-shell-github-light {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.md-preview-root.theme-shell-github-dark {
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+.md-preview-root.theme-shell-github-sepia {
+  background: #f3e9d8;
+  color: #3d2f1e;
+}
+
+.md-preview-header,
+.md-preview-panel {
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  padding: 1rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.md-preview-root.theme-shell-github-light .md-preview-header,
+.md-preview-root.theme-shell-github-light .md-preview-panel {
+  border-color: rgba(148, 163, 184, 0.45);
+  background: #ffffffd9;
+  color: #1f2937;
+}
+
+.md-preview-root.theme-shell-github-dark .md-preview-header,
+.md-preview-root.theme-shell-github-dark .md-preview-panel {
+  border-color: rgba(71, 85, 105, 0.8);
+  background: #161b22;
+  color: #e5e7eb;
+}
+
+.md-preview-root.theme-shell-github-sepia .md-preview-header,
+.md-preview-root.theme-shell-github-sepia .md-preview-panel {
+  border-color: rgba(182, 156, 110, 0.45);
+  background: #f8efdc;
+  color: #3d2f1e;
+}
+
+.md-preview-title,
+.md-preview-subtle,
+.md-preview-select {
+  color: inherit;
+}
+
+.md-preview-root.theme-shell-github-dark .md-preview-select,
+.md-preview-root.theme-shell-github-dark option {
+  background: #0d1117;
+  color: #e5e7eb;
+}
+
+.md-preview-root.theme-shell-github-sepia .md-preview-select,
+.md-preview-root.theme-shell-github-sepia option {
+  background: #efe0c8;
+  color: #3d2f1e;
+}
+
+.md-preview-select {
+  border-color: rgba(100, 116, 139, 0.45);
+}
+
+.md-preview-root.theme-shell-github-dark .md-preview-select {
+  border-color: rgba(139, 148, 158, 0.5);
+}
+
+.md-preview-root.theme-shell-github-sepia .md-preview-select {
+  border-color: rgba(160, 132, 90, 0.5);
+}
+
 .markdown-body {
   max-width: 960px;
   margin: 0 auto;
@@ -67,4 +147,9 @@
 .markdown-body.theme-github-sepia blockquote {
   border-left-color: #c4aa70;
   color: #6e5a3e;
+}
+
+.markdown-body.theme-github-light {
+  color: #24292f;
+  background: #fff;
 }
