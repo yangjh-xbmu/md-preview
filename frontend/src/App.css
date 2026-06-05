@@ -1,0 +1,28 @@
+.markdown-body {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0;
+  color: #24292f;
+  background: #fff;
+}
+
+.markdown-body img {
+  max-width: 100%;
+}
+
+.markdown-body a {
+  color: #0969da;
+}
+
+.markdown-body pre,
+.markdown-body code {
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+}
+
+.markdown-body details {
+  margin-bottom: 16px;
+}
+
+.markdown-body table {
+  margin-bottom: 16px;
+}

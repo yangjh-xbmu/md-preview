@@ -1,45 +1,34 @@
-# This file is for people and AI coding assistants developing, debugging, and extending this repository.
-> End-user documentation belongs in [README.md](./README.md).
+# md-preview
 
-# md-preview Development Notes
+## 目标
 
-## Product Goal
+将原有 CLI 预览改造为 Wails 桌面应用，并使用 React + Tailwind 作为渲染界面，仍保持：
 
-Provide a small Go CLI that previews Markdown as rendered content with GitHub-style style by default in a local desktop window.
+- Markdown 渲染与 `goldmark` 一致性
+- HTML 安全过滤
+- 文件变更自动刷新
 
-## Expected Shape
+## 关键实现
 
-- CLI binary name: `md-preview`
-- Primary command: `md-preview <file.md>`
-- Starts desktop preview window by default and refreshes when file changes.
-- Supports `--browser` to use local HTTP preview mode on `127.0.0.1`.
-- Supports `--host`, `--port`, `--no-open`, and `--watch=false`.
-- Renders Markdown for desktop preview and HTML for browser mode with a sanitizer.
+- `main.go`: CLI 参数解析与 Wails 启动。
+- `app.go`: `App` 结构体、`LoadMarkdown`、`CurrentVersion`、文件监听和事件发送（`markdown-updated`）。
+- `frontend/src/App.tsx`: GitHub 风格 Markdown 展示界面，订阅 `markdown-updated`。
+- `frontend/src/style.css`: Tailwind 入口。
+- `frontend/src/App.css`: 渲染内容细节样式。
+- `wails.json`: 前端构建和前端文件服务配置。
 
-## Implementation Notes
-
-- `main.go` holds CLI parsing, validation, rendering, and HTTP handlers.
-- Desktop mode uses `fyne.io/fyne/v2` for native rendering and a polling-based watcher.
-- Browser mode keeps the old `goldmark + bluemonday` path, serving a local preview page and `/status` endpoint.
-- Validation rejects non-existing files, directories, and unsupported extensions.
-
-## Development Principles
-
-- Keep the project small and dependency-light.
-- Prefer established libraries for Markdown parsing and HTML sanitization.
-- Do not execute arbitrary user-provided scripts.
-- Keep generated HTML local-only by default.
-
-## Verification
+## 验证命令
 
 ```bash
 go test ./...
-
-# Desktop default
-
-go run . README.md
-
-# Browser mode
-
-go run . --browser --no-open --port 0 README.md
+wails generate module
+wails dev
+wails build
+npm --prefix frontend install
+npm --prefix frontend run build
 ```
+
+## 约束
+
+- 仅提交必要文件，不要提交 `frontend/node_modules`。
+- 桌面应用端口监听、HTML 输出和渲染策略保持最小复杂度，优先依赖 Wails 生命周期与事件机制。

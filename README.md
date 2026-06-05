@@ -1,72 +1,57 @@
 # md-preview
 
-Quickly preview Markdown files as rendered HTML with GitHub-style styling.
+Small desktop app for rendering a local Markdown file in a GitHub-style preview window.
 
-`md-preview` starts a desktop app by default to show rendered Markdown in a local window.
-Optionally, you can use `--browser` to run the original local HTML preview server.
+## Requirements
 
-## Prerequisites
+- Go 1.22+
+- Node.js (for frontend build)
+- [Wails](https://wails.io/) CLI
 
-Go 1.25.7 or newer.
-
-## Install
-
-```bash
-go install github.com/yangjh-xbmu/md-preview@latest
-```
-
-From a local checkout:
+## Install and run
 
 ```bash
-go install .
+go mod download
+wails build
+./md-preview <file.md>
 ```
 
-## Run
+`<file.md>` can also be `.markdown`.
+
+## CLI options
+
+- `--watch=false` disables file watching
+- `--browser` is kept for compatibility and currently maps to desktop mode
+
+Examples:
 
 ```bash
 md-preview README.md
+md-preview --watch=false notes.markdown
 ```
 
-During development:
+## Notes
+
+- The app uses `goldmark` + `github.com/yuin/goldmark/extension` for Markdown rendering.
+- Output is sanitized with `github.com/microcosm-cc/bluemonday`.
+- Rendering and updates are handled in Go. The frontend listens to `markdown-updated` events from Wails.
+
+## Development
 
 ```bash
-go run . README.md
+wails dev
 ```
 
-By default, the tool opens a local desktop preview window and refreshes content when the Markdown file changes.
+You can also build the frontend manually:
 
-## Options
-
-```text
-Usage: md-preview [--browser] [--host 127.0.0.1] [--port 17776] [--no-open] [--watch=false] <file.md>
+```bash
+cd frontend
+npm install
+npm run build
 ```
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `--browser` | `false` | Start the browser-based preview mode. |
-| `--host` | `127.0.0.1` | HTTP bind host for browser mode. Use another value only when you intentionally want a wider bind address. |
-| `--port` | `17776` | HTTP bind port. Use `0` to let the OS choose an available port. |
-| `--no-open` | `false` | Print the preview URL without opening the browser. |
-| `--watch` | `true` | Poll the file modification status from the page and reload after changes. |
+## Troubleshooting
 
-## Rendering
-
-Desktop mode uses `fyne.io/fyne/v2` for a native window and live refreshes rendered markdown.
-Browser mode renders HTML with `github.com/yuin/goldmark` and sanitizes generated HTML with `github.com/microcosm-cc/bluemonday`.
-
-Desktop output is plain Markdown rendering, while browser output shows full GitHub-style HTML.
-
-## Common Problems
-
-`file does not exist`: check the path passed to `md-preview`.
-
-`expected a Markdown file, got directory`: pass a file path instead of a folder.
-
-`unsupported file extension`: use `.md` or `.markdown`.
-
-`port 17776 on host 127.0.0.1 is not available`: choose another port with `--port`, or stop the process already using that port.
-`Could not open browser automatically`: usually means default browser launcher is unavailable.
-
-## License
-
-MIT
+- `file does not exist`: check the Markdown path and permissions.
+- `unsupported file extension`: use `.md` or `.markdown`.
+- `expected a Markdown file, got directory`: pass a file path instead of a folder.

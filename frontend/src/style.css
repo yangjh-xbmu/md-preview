@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Noto Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+section > .markdown-body {
+  width: 100%;
+}
