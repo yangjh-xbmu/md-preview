@@ -32,3 +32,4 @@ npm --prefix frontend run build
 
 - 仅提交必要文件，不要提交 `frontend/node_modules`。
 - 桌面应用端口监听、HTML 输出和渲染策略保持最小复杂度，优先依赖 Wails 生命周期与事件机制。
+- 新增功能或交互变更后，必须同步更新 `README.md` 中的功能特性列表和快捷键表格。

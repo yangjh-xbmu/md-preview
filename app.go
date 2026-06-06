@@ -373,6 +373,10 @@ func (a *App) renderMarkdown() PreviewPayload {
 		return errorPayload("", "No Markdown file path configured. Run with md-preview <file.md>.")
 	}
 
+	if a.ctx != nil {
+		runtime.WindowSetTitle(a.ctx, "md-preview - "+filepath.Base(filePath))
+	}
+
 	source, err := os.ReadFile(filePath)
 	if err != nil {
 		return errorPayload(filePath, fmt.Sprintf("cannot read Markdown file: %v", err))

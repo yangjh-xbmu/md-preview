@@ -4,18 +4,25 @@
 
 项目核心目标是：给本地文件提供稳定、干净且可重复的 Markdown 渲染体验，直接在独立窗口中查看，避免启动浏览器或暴露额外服务。
 
-## 设计初衷
+## 功能特性
 
-- **本地优先**：只处理本地 Markdown 文件，不引入远程预览服务。
-- **安全**：渲染后通过白名单清洗，过滤不安全标签，避免脚本注入风险。
-- **轻量路径**：CLI 只需要一个文件参数即可打开预览窗口，默认监听文件变更自动刷新。
-- **桌面体验**：保留应用窗口的交互感，满足“记事本式”预览需求。
+- **Markdown 渲染**：goldmark + GFM（表格、任务列表、删除线等），经 bluemonday 安全过滤
+- **语法高亮**：Prism.js 支持 14 种编程语言，带行号显示和代码块复制按钮
+- **文件监听**：1 秒轮询，文件变更自动刷新预览
+- **目录导航**：自动提取标题生成 TOC 侧边栏，点击跳转
+- **三套主题**：Light / Dark / Sepia，选择持久化存储
+- **拖放支持**：直接拖入 `.md` 文件即可切换预览
+- **导出 HTML**：导出带内联样式的独立 HTML 文件，支持主题选择
+- **选中即复制**：鼠标左键选中正文文字，松开后自动复制到系统剪贴板
+- **干净打印**：打印 PDF 时自动隐藏界面 chrome（菜单、目录、状态栏），移除面板装饰
 
-## 兼容与技术约束
+## 键盘快捷键
 
-- 仅支持 `.md` 与 `.markdown`。
-- 文件变更时通过 Wails 事件推送给前端，不依赖浏览器轮询。
-- 默认渲染使用 `goldmark` + `extension.GFM`，再经过 `bluemonday` 清洗。
+| 快捷键 | 功能 |
+|--------|------|
+| `Ctrl+O` | 打开 Markdown 文件 |
+| `Ctrl+S` | 导出 HTML |
+| `Ctrl+P` | 打印 / 导出 PDF |
 
 ## 安装与运行
 
@@ -51,7 +58,7 @@ Usage: md-preview [--browser] [--watch=false] <file.md>
   - `md-preview notes.md`
   - `md-preview --watch=false notes.md`
 - 只要解析路径合法并成功启动预览，进程会持续运行直到窗口关闭；若参数或文件异常则快速返回非零退出码并输出错误。
-- 当需要“可重复行为”时，优先使用 `--watch=false`。
+- 当需要”可重复行为”时，优先使用 `--watch=false`。
 - 不需要关注前端开发环境端口、浏览器地址或本地 HTTP 服务。
 
 ### 常见错误
@@ -74,23 +81,16 @@ npm install
 npm run build
 ```
 
-### 内置主题
+## 版本发布
 
-应用内置 3 套主题，可在窗口顶部切换：
-
-- `GitHub Light`：默认主题，偏浅色与 GitHub 标准阅读风格一致。
-- `GitHub Dark`：深色主题，适合夜间长时间阅读。
-- `Sepia`：复古纸张风格，适合文本密集的文档。
-
-所选主题会持久化保存到本地，重启窗口后自动恢复上次选择。
-
-## 验证
+通过 Git tag 触发 GitHub Actions 自动化构建三平台二进制包：
 
 ```bash
-go test ./...
-wails generate module
-wails build
+git tag v0.0.1
+git push origin v0.0.1
 ```
+
+构建产物（Windows x64 .exe / macOS Intel & Apple Silicon / Linux x64）自动附到 GitHub Release。
 
 ## 许可
 

@@ -1,0 +1,44 @@
+name: README Sync Check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  check-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check README updated with source changes
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="$(git rev-parse HEAD~1)"
+          fi
+
+          SOURCE_FILES=$(git diff --name-only "$BASE" HEAD -- \
+            '*.go' \
+            'frontend/src/**' \
+            'wails.json' \
+          )
+
+          if [ -z "$SOURCE_FILES" ]; then
+            echo "No source files changed, skipping README check."
+            exit 0
+          fi
+
+          README_CHANGED=$(git diff --name-only "$BASE" HEAD -- README.md)
+
+          if [ -z "$README_CHANGED" ]; then
+            echo "::warning title=README not updated::Source files changed but README.md was not updated. Consider documenting new features or changes."
+            echo "Changed source files:"
+            echo "$SOURCE_FILES"
+          else
+            echo "README.md updated alongside source changes."
+          fi
