@@ -431,3 +431,39 @@
   color: #24292f;
   background: #fff;
 }
+
+@media print {
+  .md-floating-menu,
+  .md-preview-toc,
+  .md-preview-status {
+    display: none;
+  }
+
+  .md-preview-content-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .md-preview-panel {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+}
+
+.printing .md-floating-menu,
+.printing .md-preview-toc,
+.printing .md-preview-status {
+  display: none;
+}
+
+.printing .md-preview-content-layout {
+  grid-template-columns: 1fr;
+}
+
+.printing .md-preview-panel {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}

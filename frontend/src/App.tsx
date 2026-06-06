@@ -1,5 +1,5 @@
-import { MouseEvent, useEffect, useRef, useState } from "react";
-import { EventsOff, EventsOn, OnFileDrop, OnFileDropOff } from "../wailsjs/runtime";
+import { useEffect, useRef, useState } from "react";
+import { ClipboardSetText, EventsOff, EventsOn, OnFileDrop, OnFileDropOff } from "../wailsjs/runtime";
 import { ExportHTMLWithDialog, LoadMarkdown, OpenMarkdownFile, PrintPreview, SetFile, SetTheme } from "../wailsjs/go/main/App";
 import "github-markdown-css/github-markdown.css";
 import Prism from "prismjs";
@@ -328,7 +328,25 @@ function App() {
 		Prism.highlightAllUnder(root);
 	}, [contentHtml]);
 
-	const onTocNavigation = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
+	useEffect(() => {
+		const previewEl = previewRef.current;
+		if (!previewEl) return;
+
+		const handleMouseUp = (event: MouseEvent) => {
+			if (event.button !== 0) return;
+			if ((event.target as HTMLElement).closest(".md-code-copy")) return;
+
+			const text = window.getSelection()?.toString() ?? "";
+			if (!text.trim()) return;
+
+			void ClipboardSetText(text);
+		};
+
+		previewEl.addEventListener("mouseup", handleMouseUp);
+		return () => previewEl.removeEventListener("mouseup", handleMouseUp);
+	}, []);
+
+	const onTocNavigation = (event: MouseEvent, id: string) => {
 		event.preventDefault();
 		const target = document.getElementById(id);
 		if (target) {
@@ -378,7 +396,9 @@ function App() {
 
 	const printToPdf = () => {
 		setMenuOpen(false);
+		document.documentElement.classList.add("printing");
 		PrintPreview();
+		document.documentElement.classList.remove("printing");
 		setActionMessage("Print dialog opened.");
 	};
 
@@ -463,7 +483,7 @@ function App() {
 								<ul className="space-y-1">
 									{toc.map((item) => (
 										<li key={item.id} style={{ paddingLeft: `${Math.max(item.level - 1, 0) * 0.75}rem` }}>
-											<a href={`#${item.id}`} onClick={(event) => onTocNavigation(event, item.id)} className="md-preview-subtle text-sm">
+											<a href={`#${item.id}`} onClick={(event) => onTocNavigation(event.nativeEvent, item.id)} className="md-preview-subtle text-sm">
 												{item.text}
 											</a>
 										</li>
