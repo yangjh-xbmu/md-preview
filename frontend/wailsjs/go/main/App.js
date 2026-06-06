@@ -21,3 +21,7 @@ export function LoadMarkdown() {
 export function PrintPreview() {
   return window['go']['main']['App']['PrintPreview']();
 }
+
+export function SetFile(arg1) {
+  return window['go']['main']['App']['SetFile'](arg1);
+}

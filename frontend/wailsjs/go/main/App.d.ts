@@ -11,3 +11,5 @@ export function ExportMarkdown(arg1:string):Promise<string>;
 export function LoadMarkdown():Promise<main.previewPayload>;
 
 export function PrintPreview():Promise<void>;
+
+export function SetFile(arg1:string):Promise<main.previewPayload>;

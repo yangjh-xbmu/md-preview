@@ -42,6 +42,7 @@ type App struct {
 
 	lastStateKey string
 	stateMu      sync.Mutex
+	fileMu       sync.RWMutex
 }
 
 const exportHTMLTemplate = `<!doctype html>
@@ -215,11 +216,36 @@ func (a *App) LoadMarkdown() previewPayload {
 
 // CurrentVersion returns file change fingerprint.
 func (a *App) CurrentVersion() string {
-	version, err := fileVersion(a.cfg.File)
+	version, err := fileVersion(a.currentFilePath())
 	if err != nil {
 		return ""
 	}
 	return version
+}
+
+// SetFile updates the target markdown path and reloads the preview.
+func (a *App) SetFile(path string) previewPayload {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return errorPayload("", "No file path provided.")
+	}
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return errorPayload("", fmt.Sprintf("cannot resolve file path: %v", err))
+	}
+
+	if err := validateMarkdownFile(absPath); err != nil {
+		return errorPayload("", err.Error())
+	}
+
+	a.fileMu.Lock()
+	a.cfg.File = absPath
+	a.fileMu.Unlock()
+
+	payload := a.renderMarkdown()
+	a.emitIfChanged(payload)
+	return payload
 }
 
 func (a *App) watchForChanges() {
@@ -256,13 +282,14 @@ func (a *App) emitIfChanged(payload previewPayload) {
 }
 
 func (a *App) renderMarkdown() previewPayload {
-	if a.cfg.File == "" {
+	filePath := a.currentFilePath()
+	if filePath == "" {
 		return errorPayload("", "No Markdown file path configured. Run with md-preview <file.md>.")
 	}
 
-	source, err := os.ReadFile(a.cfg.File)
+	source, err := os.ReadFile(filePath)
 	if err != nil {
-		return errorPayload(a.cfg.File, fmt.Sprintf("cannot read Markdown file: %v", err))
+		return errorPayload(filePath, fmt.Sprintf("cannot read Markdown file: %v", err))
 	}
 
 	var rendered strings.Builder
@@ -270,13 +297,13 @@ func (a *App) renderMarkdown() previewPayload {
 		return errorPayload(a.cfg.File, fmt.Sprintf("cannot render Markdown: %v", err))
 	}
 
-	version, err := fileVersion(a.cfg.File)
+		version, err := fileVersion(filePath)
 	if err != nil {
-		return errorPayload(a.cfg.File, err.Error())
+		return errorPayload(filePath, err.Error())
 	}
 
 	return previewPayload{
-		FilePath:   a.cfg.File,
+		FilePath:   filePath,
 		HTML:       a.policy.Sanitize(rendered.String()),
 		Version:    version,
 		RenderedAt: time.Now().Format(time.RFC3339),
@@ -289,14 +316,14 @@ func (a *App) ExportHTML(path string, theme string) (string, error) {
 		return "", fmt.Errorf("cannot export Markdown: %s", payload.Error)
 	}
 
-	target, err := resolveExportPath(a.cfg.File, path)
+	target, err := resolveExportPath(a.currentFilePath(), path)
 	if err != nil {
 		return "", err
 	}
 
 	body := payload.HTML
 	themeClass := sanitizeTheme(theme)
-	title := html.EscapeString(filepath.Base(a.cfg.File))
+	title := html.EscapeString(filepath.Base(a.currentFilePath()))
 	output := fmt.Sprintf(exportHTMLTemplate, title, themeClass, body)
 
 	if err := os.WriteFile(target, []byte(output), 0o644); err != nil {
@@ -382,6 +409,12 @@ func stateSignature(state previewPayload) string {
 		return strconv.FormatInt(time.Now().UnixNano(), 10)
 	}
 	return string(b)
+}
+
+func (a *App) currentFilePath() string {
+	a.fileMu.RLock()
+	defer a.fileMu.RUnlock()
+	return a.cfg.File
 }
 
 func errorPayload(filePath, message string) previewPayload {

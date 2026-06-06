@@ -1,6 +1,6 @@
-import { ChangeEvent, MouseEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, KeyboardEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import { EventsOff, EventsOn } from "../wailsjs/runtime";
-import { ExportHTML, LoadMarkdown, PrintPreview } from "../wailsjs/go/main/App";
+import { ExportHTML, LoadMarkdown, PrintPreview, SetFile } from "../wailsjs/go/main/App";
 import "github-markdown-css/github-markdown.css";
 import Prism from "prismjs";
 import "prismjs/components/prism-clike";
@@ -142,6 +142,7 @@ function App() {
 		version: "",
 		renderedAt: "",
 	});
+	const [filePathInput, setFilePathInput] = useState("");
 	const [contentHtml, setContentHtml] = useState(fallbackMarkup);
 	const [busy, setBusy] = useState(true);
 	const [theme, setTheme] = useState<ThemeName>(() => {
@@ -265,6 +266,32 @@ function App() {
 		}
 	};
 
+	const onFilePathChange = (event: ChangeEvent<HTMLInputElement>) => {
+		setFilePathInput(event.target.value);
+	};
+
+	const loadFromPath = async () => {
+		const trimmed = filePathInput.trim();
+		if (!trimmed) {
+			setActionMessage("Please enter a Markdown file path.");
+			return;
+		}
+
+		try {
+			const next = await SetFile(trimmed);
+			applyPayload(next);
+			setActionMessage(next.error ? next.error : "File loaded.");
+		} catch {
+			setActionMessage("Failed to load file path. Check the path and permissions.");
+		}
+	};
+
+	const openPathOnEnter = (event: KeyboardEvent<HTMLInputElement>) => {
+		if (event.key === "Enter") {
+			loadFromPath();
+		}
+	};
+
 	const exportCurrentHtml = async () => {
 		if (!payload.filePath) {
 			setActionMessage("Open a Markdown file before exporting.");
@@ -341,6 +368,23 @@ function App() {
 							className="rounded-md border px-3 py-1.5 text-sm font-medium md-preview-select"
 						>
 							Export PDF
+						</button>
+					</div>
+					<div className="mt-3 flex flex-wrap items-center gap-2">
+						<input
+							value={filePathInput}
+							onChange={onFilePathChange}
+							onKeyDown={openPathOnEnter}
+							placeholder="Paste Markdown file path and press Enter"
+							type="text"
+							className="min-w-[280px] flex-1 rounded-md border bg-transparent px-3 py-1.5 text-sm md-preview-select"
+						/>
+						<button
+							type="button"
+							onClick={loadFromPath}
+							className="rounded-md border px-3 py-1.5 text-sm font-medium md-preview-select"
+						>
+							Load File
 						</button>
 					</div>
 					{actionMessage ? <p className="mt-2 text-xs md-preview-subtle">{actionMessage}</p> : null}
