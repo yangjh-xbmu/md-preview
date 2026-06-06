@@ -1,6 +1,8 @@
 # SESSION LOG
 
 ## 完成
+- 2026-06-06 修复 GitHub Actions Release workflow，经 7 次迭代使四个平台（Win/macOS Intel/macOS ARM/Linux）全部构建成功并生成 Draft Release
+- 2026-06-06 清理失败标签和旧 Release（v1.0.0/v1.1.0/v0.0.1-v0.0.6），仅保留 v0.0.7
 - 2026-06-06 左键选中正文文本自动复制到系统剪贴板，匹配 WezTerm 交互体验
 - 2026-06-06 打印 PDF 时隐藏浮动菜单、TOC 目录、状态栏和面板圆角/边框/阴影，采用 @media print + JS .printing class 双方案兼容 WebView2
 - 2026-06-06 窗口标题栏显示当前打开的文件名
@@ -19,6 +21,11 @@
 - 2026-06-06 撰写并推送 Obsidian 技术笔记《Wails 与 Vite 桌面应用空白页排查》到 MyNotes Inbox。
 
 ## 发现
+- 2026-06-06 GitHub Actions macOS Wails build 产物是 .app 包而非裸二进制，打包需用 tar czf md-preview.app
+- 2026-06-06 GitHub Actions Windows runner 上 Wails build -o 生成的二进制可能不带 .exe 扩展名
+- 2026-06-06 go install wails CLI 的正确路径是 github.com/wailsapp/wails/v2/cmd/wails@version，非 v2 裸包
+- 2026-06-06 Ubuntu 24.04 移除了 libwebkit2gtk-4.0-dev，Wails v2 需用 ubuntu-22.04 runner
+- 2026-06-06 GitHub Actions matrix 默认 fail-fast 会导致一个 job 失败即取消其余，跨平台构建需显式设 false
 - 2026-06-06 WebView2 打印时 Vite 代码分割的 @media print CSS 可能不生效，需用 JS 在 window.print 前同步添加 print 类作为可靠方案
 - 2026-06-06 Wails v2 Windows 不支持跨平台编译，需 GitHub Actions 分别用 windows/macos/ubuntu runner 构建三平台二进制
 - 2026-06-06 Wails WindowSetTitle 会自动追加 "| appname" 后缀，只需传文件名即可
