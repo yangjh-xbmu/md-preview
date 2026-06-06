@@ -175,6 +175,10 @@
   gap: 1rem;
 }
 
+.md-preview-content-layout.is-single-column {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .md-preview-content-layout .md-preview-toc {
   position: sticky;
   top: 1rem;

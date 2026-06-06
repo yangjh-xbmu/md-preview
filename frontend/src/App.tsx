@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { ClipboardSetText, EventsOff, EventsOn, OnFileDrop, OnFileDropOff } from "../wailsjs/runtime";
+import {
+	ClipboardSetText,
+	EventsOff,
+	EventsOn,
+	OnFileDrop,
+	OnFileDropOff,
+	WindowFullscreen,
+	WindowIsFullscreen,
+	WindowUnfullscreen,
+} from "../wailsjs/runtime";
 import { ExportHTMLWithDialog, LoadMarkdown, OpenMarkdownFile, PrintPreview, SetFile, SetTheme } from "../wailsjs/go/main/App";
 import "github-markdown-css/github-markdown.css";
 import Prism from "prismjs";
@@ -145,6 +154,8 @@ function App() {
 		return saved === "github-dark" || saved === "github-sepia" || saved === "github-light" ? saved : "github-light";
 	});
 	const [toc, setToc] = useState<TocItem[]>([]);
+	const [tocVisible, setTocVisible] = useState(true);
+	const [fullscreen, setFullscreen] = useState(false);
 	const [actionMessage, setActionMessage] = useState("");
 	const [menuOpen, setMenuOpen] = useState(false);
 	const previewRef = useRef<HTMLDivElement | null>(null);
@@ -209,8 +220,21 @@ function App() {
 				setActionMessage(message);
 			}
 		};
+		const syncFullscreenState = async () => {
+			try {
+				const isFullscreen = await WindowIsFullscreen();
+				if (mounted) {
+					setFullscreen(isFullscreen);
+				}
+			} catch {
+				if (mounted) {
+					setFullscreen(false);
+				}
+			}
+		};
 
 		loadInitial();
+		void syncFullscreenState();
 		EventsOn("markdown-updated", handleUpdate);
 		EventsOn("theme-changed", handleThemeChange);
 		EventsOn("status-message", handleStatusMessage);
@@ -258,6 +282,12 @@ function App() {
 				return;
 			}
 
+			if (event.key === "F11") {
+				event.preventDefault();
+				void toggleFullscreen();
+				return;
+			}
+
 			if (!event.ctrlKey && !event.metaKey) {
 				return;
 			}
@@ -274,6 +304,10 @@ function App() {
 			if (key === "p") {
 				event.preventDefault();
 				printToPdf();
+			}
+			if (key === "t") {
+				event.preventDefault();
+				toggleToc();
 			}
 		};
 
@@ -402,10 +436,40 @@ function App() {
 		setActionMessage("Print dialog opened.");
 	};
 
+	const toggleToc = () => {
+		setMenuOpen(false);
+		setTocVisible((current) => {
+			const next = !current;
+			setActionMessage(next ? "Table of Contents shown." : "Table of Contents hidden.");
+			return next;
+		});
+	};
+
+	const toggleFullscreen = async () => {
+		setMenuOpen(false);
+		try {
+			const isFullscreen = await WindowIsFullscreen();
+			if (isFullscreen) {
+				WindowUnfullscreen();
+				setFullscreen(false);
+				setActionMessage("Exited full screen.");
+				return;
+			}
+
+			WindowFullscreen();
+			setFullscreen(true);
+			setActionMessage("Entered full screen.");
+		} catch {
+			setActionMessage("Failed to toggle full screen.");
+		}
+	};
+
 	const selectTheme = (nextTheme: ThemeName) => {
 		setMenuOpen(false);
 		setTheme(nextTheme);
 	};
+
+	const showToc = toc.length > 0 && tocVisible;
 
 	return (
 		<div className={`min-h-screen transition-colors duration-200 md-preview-root theme-shell-${theme}`}>
@@ -435,6 +499,18 @@ function App() {
 							<button type="button" role="menuitem" className="md-menu-item" onClick={printToPdf}>
 								<span>Print / PDF</span>
 								<kbd>Ctrl P</kbd>
+							</button>
+						</div>
+
+						<div className="md-menu-section">
+							<p className="md-menu-label">View</p>
+							<button type="button" role="menuitem" className="md-menu-item" onClick={toggleToc}>
+								<span>{tocVisible ? "Hide TOC" : "Show TOC"}</span>
+								<kbd>Ctrl T</kbd>
+							</button>
+							<button type="button" role="menuitem" className="md-menu-item" onClick={toggleFullscreen}>
+								<span>{fullscreen ? "Exit Full Screen" : "Full Screen"}</span>
+								<kbd>F11</kbd>
 							</button>
 						</div>
 
@@ -471,12 +547,12 @@ function App() {
 					</div>
 				) : null}
 
-				<div className="md-preview-content-layout">
+				<div className={`md-preview-content-layout ${showToc ? "" : "is-single-column"}`}>
 					<section className="md-preview-panel md-preview-main-panel">
 						<div ref={previewRef} className={`markdown-body theme-${theme}`} dangerouslySetInnerHTML={{ __html: contentHtml }} />
 					</section>
 
-					{toc.length > 0 ? (
+					{showToc ? (
 						<aside className="md-preview-toc md-preview-panel">
 							<h2 className="mb-3 text-sm font-semibold">Table of Contents</h2>
 							<nav aria-label="Table of contents">

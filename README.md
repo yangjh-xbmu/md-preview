@@ -23,6 +23,8 @@
 | `Ctrl+O` | 打开 Markdown 文件 |
 | `Ctrl+S` | 导出 HTML |
 | `Ctrl+P` | 打印 / 导出 PDF |
+| `Ctrl+T` | 显示 / 隐藏目录导航 |
+| `F11` | 全屏 / 退出全屏 |
 
 ## 安装与运行
 
