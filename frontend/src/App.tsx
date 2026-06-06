@@ -1,6 +1,6 @@
 import { ChangeEvent, KeyboardEvent, MouseEvent, useEffect, useRef, useState } from "react";
-import { EventsOff, EventsOn } from "../wailsjs/runtime";
-import { ExportHTML, LoadMarkdown, PrintPreview, SetFile } from "../wailsjs/go/main/App";
+import { EventsOff, EventsOn, OnFileDrop, OnFileDropOff } from "../wailsjs/runtime";
+import { ExportHTML, LoadMarkdown, OpenMarkdownFile, PrintPreview, SetFile } from "../wailsjs/go/main/App";
 import "github-markdown-css/github-markdown.css";
 import Prism from "prismjs";
 import "prismjs/components/prism-clike";
@@ -44,7 +44,7 @@ type Theme = {
 
 type CodeBlockLanguage = string;
 
-const fallbackMarkup = "<p>No preview content.</p>";
+const fallbackMarkup = "<p>No Markdown file is loaded. Open a file or pass one on the command line.</p>";
 
 const themes: Theme[] = [
 	{ name: "github-light", label: "GitHub Light", description: "Default style, close to the GitHub light reading theme." },
@@ -208,6 +208,23 @@ function App() {
 	}, []);
 
 	useEffect(() => {
+		const onDrop = (_x: number, _y: number, paths: string[]) => {
+			const first = paths && paths[0] ? paths[0].trim() : "";
+			if (!first) {
+				return;
+			}
+			setFilePathInput(first);
+			void loadFromPath(first);
+		};
+
+		OnFileDrop(onDrop, false);
+
+		return () => {
+			OnFileDropOff();
+		};
+	}, []);
+
+	useEffect(() => {
 		document.documentElement.setAttribute("data-theme", theme);
 		window.localStorage.setItem(themeStorageKey, theme);
 	}, [theme]);
@@ -270,8 +287,8 @@ function App() {
 		setFilePathInput(event.target.value);
 	};
 
-	const loadFromPath = async () => {
-		const trimmed = filePathInput.trim();
+	const loadFromPath = async (pathValue?: string) => {
+		const trimmed = (pathValue ?? filePathInput).trim();
 		if (!trimmed) {
 			setActionMessage("Please enter a Markdown file path.");
 			return;
@@ -289,6 +306,17 @@ function App() {
 	const openPathOnEnter = (event: KeyboardEvent<HTMLInputElement>) => {
 		if (event.key === "Enter") {
 			loadFromPath();
+		}
+	};
+
+	const openMarkdownFile = async () => {
+		try {
+			const next = await OpenMarkdownFile();
+			applyPayload(next);
+			setFilePathInput(next.filePath || filePathInput);
+			setActionMessage(next.error ? next.error : "File loaded.");
+		} catch {
+			setActionMessage("Failed to open Markdown file.");
 		}
 	};
 
@@ -371,6 +399,13 @@ function App() {
 						</button>
 					</div>
 					<div className="mt-3 flex flex-wrap items-center gap-2">
+						<button
+							type="button"
+							onClick={openMarkdownFile}
+							className="rounded-md border px-3 py-1.5 text-sm font-medium md-preview-select"
+						>
+							Open File
+						</button>
 						<input
 							value={filePathInput}
 							onChange={onFilePathChange}
@@ -381,7 +416,7 @@ function App() {
 						/>
 						<button
 							type="button"
-							onClick={loadFromPath}
+							onClick={() => loadFromPath()}
 							className="rounded-md border px-3 py-1.5 text-sm font-medium md-preview-select"
 						>
 							Load File

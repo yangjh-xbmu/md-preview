@@ -248,6 +248,35 @@ func (a *App) SetFile(path string) previewPayload {
 	return payload
 }
 
+// OpenMarkdownFile shows a native file picker and loads the selected Markdown file.
+func (a *App) OpenMarkdownFile() previewPayload {
+	if a.ctx == nil {
+		return errorPayload("", "Application is not ready yet.")
+	}
+
+	current := a.currentFilePath()
+	defaultDir := ""
+	if current != "" {
+		defaultDir = filepath.Dir(current)
+	}
+
+	selected, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title:            "Open Markdown File",
+		DefaultDirectory: defaultDir,
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Markdown Files (*.md;*.markdown)", Pattern: "*.md;*.markdown"},
+		},
+	})
+	if err != nil {
+		return errorPayload(current, fmt.Sprintf("cannot open file dialog: %v", err))
+	}
+	if strings.TrimSpace(selected) == "" {
+		return a.renderMarkdown()
+	}
+
+	return a.SetFile(selected)
+}
+
 func (a *App) watchForChanges() {
 	if !a.cfg.Watch {
 		payload := a.renderMarkdown()

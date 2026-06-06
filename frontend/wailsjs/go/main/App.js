@@ -18,6 +18,10 @@ export function LoadMarkdown() {
   return window['go']['main']['App']['LoadMarkdown']();
 }
 
+export function OpenMarkdownFile() {
+  return window['go']['main']['App']['OpenMarkdownFile']();
+}
+
 export function PrintPreview() {
   return window['go']['main']['App']['PrintPreview']();
 }
