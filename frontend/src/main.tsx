@@ -1,7 +1,6 @@
 import React from 'react'
 import {createRoot} from 'react-dom/client'
 import './style.css'
-import App from './App'
 
 const container = document.getElementById('root')
 
@@ -24,11 +23,12 @@ function showStartupError(error: unknown) {
 window.addEventListener('error', (event) => showStartupError(event.error || event.message))
 window.addEventListener('unhandledrejection', (event) => showStartupError(event.reason))
 
-try {
+async function startApp() {
     if (!container) {
         throw new Error('Root element was not found')
     }
 
+    const {default: App} = await import('./App')
     const root = createRoot(container)
 
     root.render(
@@ -36,6 +36,6 @@ try {
             <App/>
         </React.StrictMode>
     )
-} catch (error) {
-    showStartupError(error)
 }
+
+startApp().catch(showStartupError)
