@@ -62,11 +62,22 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           ARCHIVE="md-preview-v${VERSION}-${{ matrix.target }}-${{ matrix.arch }}.zip"
           cd build/bin
-          7z a "../../$ARCHIVE" md-preview.exe
+          ls -la
+          7z a "../../$ARCHIVE" md-preview.exe || 7z a "../../$ARCHIVE" md-preview
           echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
 
-      - name: Package (macOS / Linux)
-        if: matrix.target != 'windows'
+      - name: Package (macOS)
+        if: matrix.target == 'darwin'
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ARCHIVE="md-preview-v${VERSION}-${{ matrix.target }}-${{ matrix.arch }}.tar.gz"
+          cd build/bin
+          tar czf "../../$ARCHIVE" md-preview.app
+          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+
+      - name: Package (Linux)
+        if: matrix.target == 'linux'
         shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
