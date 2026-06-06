@@ -21,7 +21,7 @@ import (
 	gfmhtml "github.com/yuin/goldmark/renderer/html"
 )
 
-type previewPayload struct {
+type PreviewPayload struct {
 	FilePath   string `json:"filePath"`
 	HTML       string `json:"html"`
 	Version    string `json:"version"`
@@ -210,7 +210,7 @@ func (a *App) startup(ctx context.Context) {
 }
 
 // LoadMarkdown loads the target file and returns rendered HTML.
-func (a *App) LoadMarkdown() previewPayload {
+func (a *App) LoadMarkdown() PreviewPayload {
 	return a.renderMarkdown()
 }
 
@@ -224,7 +224,7 @@ func (a *App) CurrentVersion() string {
 }
 
 // SetFile updates the target markdown path and reloads the preview.
-func (a *App) SetFile(path string) previewPayload {
+func (a *App) SetFile(path string) PreviewPayload {
 	path = strings.TrimSpace(path)
 	if path == "" {
 		return errorPayload("", "No file path provided.")
@@ -249,7 +249,7 @@ func (a *App) SetFile(path string) previewPayload {
 }
 
 // OpenMarkdownFile shows a native file picker and loads the selected Markdown file.
-func (a *App) OpenMarkdownFile() previewPayload {
+func (a *App) OpenMarkdownFile() PreviewPayload {
 	if a.ctx == nil {
 		return errorPayload("", "Application is not ready yet.")
 	}
@@ -298,7 +298,7 @@ func (a *App) watchForChanges() {
 	}
 }
 
-func (a *App) emitIfChanged(payload previewPayload) {
+func (a *App) emitIfChanged(payload PreviewPayload) {
 	a.stateMu.Lock()
 	defer a.stateMu.Unlock()
 
@@ -310,7 +310,7 @@ func (a *App) emitIfChanged(payload previewPayload) {
 	runtime.EventsEmit(a.ctx, "markdown-updated", payload)
 }
 
-func (a *App) renderMarkdown() previewPayload {
+func (a *App) renderMarkdown() PreviewPayload {
 	filePath := a.currentFilePath()
 	if filePath == "" {
 		return errorPayload("", "No Markdown file path configured. Run with md-preview <file.md>.")
@@ -326,12 +326,12 @@ func (a *App) renderMarkdown() previewPayload {
 		return errorPayload(a.cfg.File, fmt.Sprintf("cannot render Markdown: %v", err))
 	}
 
-		version, err := fileVersion(filePath)
+	version, err := fileVersion(filePath)
 	if err != nil {
 		return errorPayload(filePath, err.Error())
 	}
 
-	return previewPayload{
+	return PreviewPayload{
 		FilePath:   filePath,
 		HTML:       a.policy.Sanitize(rendered.String()),
 		Version:    version,
@@ -421,7 +421,7 @@ func (b *byteBuffer) Write(p []byte) (int, error) {
 	return b.builder.WriteString(string(p))
 }
 
-func stateSignature(state previewPayload) string {
+func stateSignature(state PreviewPayload) string {
 	key := struct {
 		FilePath string `json:"filePath"`
 		HTML     string `json:"html"`
@@ -446,8 +446,8 @@ func (a *App) currentFilePath() string {
 	return a.cfg.File
 }
 
-func errorPayload(filePath, message string) previewPayload {
-	return previewPayload{
+func errorPayload(filePath, message string) PreviewPayload {
+	return PreviewPayload{
 		FilePath: filePath,
 		Error:    message,
 	}

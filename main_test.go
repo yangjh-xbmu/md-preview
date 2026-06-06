@@ -196,7 +196,7 @@ func TestResolveExportPathRejectsBadDirectory(t *testing.T) {
 }
 
 func TestStateSignatureIsDeterministic(t *testing.T) {
-	payload := previewPayload{
+	payload := PreviewPayload{
 		FilePath:   "/tmp/a.md",
 		HTML:       "<h1>a</h1>",
 		Version:    "123",
@@ -210,7 +210,7 @@ func TestStateSignatureIsDeterministic(t *testing.T) {
 }
 
 func TestConfigCanMarshalForFrontend(t *testing.T) {
-	payload := previewPayload{FilePath: "a", HTML: "<h1>a</h1>", Version: "1", RenderedAt: "x"}
+	payload := PreviewPayload{FilePath: "a", HTML: "<h1>a</h1>", Version: "1", RenderedAt: "x"}
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatalf("unable to marshal payload: %v", err)

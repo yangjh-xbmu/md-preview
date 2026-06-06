@@ -8,10 +8,10 @@ export function ExportHTML(arg1:string,arg2:string):Promise<string>;
 
 export function ExportMarkdown(arg1:string):Promise<string>;
 
-export function LoadMarkdown():Promise<main.previewPayload>;
+export function LoadMarkdown():Promise<main.PreviewPayload>;
 
-export function OpenMarkdownFile():Promise<main.previewPayload>;
+export function OpenMarkdownFile():Promise<main.PreviewPayload>;
 
 export function PrintPreview():Promise<void>;
 
-export function SetFile(arg1:string):Promise<main.previewPayload>;
+export function SetFile(arg1:string):Promise<main.PreviewPayload>;

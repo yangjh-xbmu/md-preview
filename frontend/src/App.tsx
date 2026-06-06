@@ -54,6 +54,7 @@ const themes: Theme[] = [
 
 const statusUnknown = "Loading preview...";
 const themeStorageKey = "md-preview.theme";
+const backendLoadTimeoutMs = 3000;
 
 function slugifyHeading(text: string, fallbackIndex: number): string {
 	const base = text
@@ -135,6 +136,16 @@ function defaultExportPath(filePath: string): string {
 	return `${base}-preview.html`;
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+	return new Promise((resolve, reject) => {
+		const timeout = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+		promise
+			.then((value) => resolve(value))
+			.catch((error) => reject(error))
+			.finally(() => window.clearTimeout(timeout));
+	});
+}
+
 function App() {
 	const [payload, setPayload] = useState<PreviewPayload>({
 		filePath: "",
@@ -171,16 +182,21 @@ function App() {
 
 		const loadInitial = async () => {
 			try {
-				const next = await LoadMarkdown();
+				const next = await withTimeout(
+					LoadMarkdown(),
+					backendLoadTimeoutMs,
+					"Backend did not respond. Use Open File or restart the app with a Markdown path.",
+				);
 				if (!mounted) {
 					return;
 				}
 				applyPayload(next);
-			} catch {
+			} catch (error) {
 				if (mounted) {
+					const message = error instanceof Error ? error.message : "Failed to load Markdown preview.";
 					setPayload((current) => ({
 						...current,
-						error: "Failed to load Markdown preview. Check the file path and permissions.",
+						error: message,
 					}));
 					setContentHtml(fallbackMarkup);
 					setToc([]);

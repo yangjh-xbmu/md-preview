@@ -1,6 +1,6 @@
 export namespace main {
 	
-	export class previewPayload {
+	export class PreviewPayload {
 	    filePath: string;
 	    html: string;
 	    version: string;
@@ -8,7 +8,7 @@ export namespace main {
 	    error?: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new previewPayload(source);
+	        return new PreviewPayload(source);
 	    }
 	
 	    constructor(source: any = {}) {
