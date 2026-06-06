@@ -1,6 +1,6 @@
 import { MouseEvent, useEffect, useRef, useState } from "react";
 import { EventsOff, EventsOn, OnFileDrop, OnFileDropOff } from "../wailsjs/runtime";
-import { LoadMarkdown, SetFile, SetTheme } from "../wailsjs/go/main/App";
+import { ExportHTMLWithDialog, LoadMarkdown, OpenMarkdownFile, PrintPreview, SetFile, SetTheme } from "../wailsjs/go/main/App";
 import "github-markdown-css/github-markdown.css";
 import Prism from "prismjs";
 import "prismjs/components/prism-markup";
@@ -45,6 +45,12 @@ const fallbackMarkup = "<p>No Markdown file is loaded. Open a file or pass one o
 const statusUnknown = "Loading preview...";
 const themeStorageKey = "md-preview.theme";
 const backendLoadTimeoutMs = 3000;
+
+const themeLabels: Record<ThemeName, string> = {
+	"github-light": "Light",
+	"github-dark": "Dark",
+	"github-sepia": "Sepia",
+};
 
 function slugifyHeading(text: string, fallbackIndex: number): string {
 	const base = text
@@ -140,7 +146,9 @@ function App() {
 	});
 	const [toc, setToc] = useState<TocItem[]>([]);
 	const [actionMessage, setActionMessage] = useState("");
+	const [menuOpen, setMenuOpen] = useState(false);
 	const previewRef = useRef<HTMLDivElement | null>(null);
+	const menuRef = useRef<HTMLDivElement | null>(null);
 
 	const applyPayload = (next: PreviewPayload) => {
 		setPayload(next);
@@ -238,6 +246,47 @@ function App() {
 	}, [theme]);
 
 	useEffect(() => {
+		const onDocumentPointerDown = (event: PointerEvent) => {
+			if (!menuRef.current || menuRef.current.contains(event.target as Node)) {
+				return;
+			}
+			setMenuOpen(false);
+		};
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") {
+				setMenuOpen(false);
+				return;
+			}
+
+			if (!event.ctrlKey && !event.metaKey) {
+				return;
+			}
+
+			const key = event.key.toLowerCase();
+			if (key === "o") {
+				event.preventDefault();
+				void openMarkdownFile();
+			}
+			if (key === "s") {
+				event.preventDefault();
+				void exportHtml();
+			}
+			if (key === "p") {
+				event.preventDefault();
+				printToPdf();
+			}
+		};
+
+		document.addEventListener("pointerdown", onDocumentPointerDown);
+		window.addEventListener("keydown", onKeyDown);
+
+		return () => {
+			document.removeEventListener("pointerdown", onDocumentPointerDown);
+			window.removeEventListener("keydown", onKeyDown);
+		};
+	});
+
+	useEffect(() => {
 		const root = previewRef.current;
 		if (!root) {
 			return;
@@ -303,8 +352,92 @@ function App() {
 		}
 	};
 
+	const openMarkdownFile = async () => {
+		setMenuOpen(false);
+		try {
+			const next = await OpenMarkdownFile();
+			applyPayload(next);
+			setActionMessage(next.error ? next.error : "File loaded.");
+		} catch {
+			setActionMessage("Failed to open Markdown file.");
+		}
+	};
+
+	const exportHtml = async () => {
+		setMenuOpen(false);
+		try {
+			const saved = await ExportHTMLWithDialog();
+			if (saved) {
+				setActionMessage(`Exported HTML to: ${saved}`);
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Export failed.";
+			setActionMessage(message);
+		}
+	};
+
+	const printToPdf = () => {
+		setMenuOpen(false);
+		PrintPreview();
+		setActionMessage("Print dialog opened.");
+	};
+
+	const selectTheme = (nextTheme: ThemeName) => {
+		setMenuOpen(false);
+		setTheme(nextTheme);
+	};
+
 	return (
 		<div className={`min-h-screen transition-colors duration-200 md-preview-root theme-shell-${theme}`}>
+			<div ref={menuRef} className="md-floating-menu">
+				<button
+					type="button"
+					className="md-menu-trigger"
+					aria-haspopup="menu"
+					aria-expanded={menuOpen}
+					onClick={() => setMenuOpen((current) => !current)}
+				>
+					Menu
+				</button>
+
+				{menuOpen ? (
+					<div className="md-menu-popover" role="menu">
+						<div className="md-menu-section">
+							<p className="md-menu-label">File</p>
+							<button type="button" role="menuitem" className="md-menu-item" onClick={openMarkdownFile}>
+								<span>Open Markdown</span>
+								<kbd>Ctrl O</kbd>
+							</button>
+							<button type="button" role="menuitem" className="md-menu-item" onClick={exportHtml}>
+								<span>Export HTML</span>
+								<kbd>Ctrl S</kbd>
+							</button>
+							<button type="button" role="menuitem" className="md-menu-item" onClick={printToPdf}>
+								<span>Print / PDF</span>
+								<kbd>Ctrl P</kbd>
+							</button>
+						</div>
+
+						<div className="md-menu-section">
+							<p className="md-menu-label">Theme</p>
+							<div className="md-theme-grid">
+								{(["github-light", "github-dark", "github-sepia"] as ThemeName[]).map((item) => (
+									<button
+										key={item}
+										type="button"
+										className={`md-theme-choice ${theme === item ? "is-active" : ""}`}
+										onClick={() => selectTheme(item)}
+									>
+										<span className={`md-theme-swatch ${item}`} />
+										<span>{themeLabels[item]}</span>
+									</button>
+								))}
+							</div>
+						</div>
+					</div>
+				) : null}
+			</div>
+
 			<div className="mx-auto flex max-w-[1400px] flex-col gap-3 p-4">
 				{busy || actionMessage ? (
 					<div className="md-preview-status md-preview-subtle">
