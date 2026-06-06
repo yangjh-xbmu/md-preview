@@ -43,6 +43,8 @@ type App struct {
 	lastStateKey string
 	stateMu      sync.Mutex
 	fileMu       sync.RWMutex
+	theme        string
+	themeMu      sync.RWMutex
 }
 
 const exportHTMLTemplate = `<!doctype html>
@@ -186,6 +188,7 @@ func NewApp(cfg config) (*App, error) {
 			cfg:    cfg,
 			md:     newRenderer(),
 			policy: markdownPolicy(),
+			theme:  "github-light",
 		}, nil
 	}
 
@@ -199,6 +202,7 @@ func NewApp(cfg config) (*App, error) {
 		cfg:    cfg,
 		md:     newRenderer(),
 		policy: markdownPolicy(),
+		theme:  "github-light",
 	}, nil
 }
 
@@ -248,6 +252,23 @@ func (a *App) SetFile(path string) PreviewPayload {
 	return payload
 }
 
+// SetTheme updates the active preview theme and notifies the frontend.
+func (a *App) SetTheme(theme string) string {
+	next := sanitizeTheme(theme)
+	a.themeMu.Lock()
+	a.theme = next
+	a.themeMu.Unlock()
+
+	if a.ctx != nil {
+		runtime.EventsEmit(a.ctx, "theme-changed", next)
+	}
+	return next
+}
+
+func (a *App) CurrentTheme() string {
+	return a.currentTheme()
+}
+
 // OpenMarkdownFile shows a native file picker and loads the selected Markdown file.
 func (a *App) OpenMarkdownFile() PreviewPayload {
 	if a.ctx == nil {
@@ -275,6 +296,42 @@ func (a *App) OpenMarkdownFile() PreviewPayload {
 	}
 
 	return a.SetFile(selected)
+}
+
+func (a *App) ExportHTMLWithDialog() (string, error) {
+	if a.ctx == nil {
+		return "", fmt.Errorf("application is not ready yet")
+	}
+
+	current := a.currentFilePath()
+	if current == "" {
+		return "", fmt.Errorf("open a Markdown file before exporting")
+	}
+
+	defaultDir := filepath.Dir(current)
+	defaultName := strings.TrimSuffix(filepath.Base(current), filepath.Ext(current)) + "-preview.html"
+	selected, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:                "Export HTML",
+		DefaultDirectory:     defaultDir,
+		DefaultFilename:      defaultName,
+		CanCreateDirectories: true,
+		Filters: []runtime.FileFilter{
+			{DisplayName: "HTML Files (*.html)", Pattern: "*.html"},
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(selected) == "" {
+		return "", nil
+	}
+
+	saved, err := a.ExportHTML(selected, a.currentTheme())
+	if err != nil {
+		return "", err
+	}
+	runtime.EventsEmit(a.ctx, "status-message", "Exported HTML to: "+saved)
+	return saved, nil
 }
 
 func (a *App) watchForChanges() {
@@ -444,6 +501,12 @@ func (a *App) currentFilePath() string {
 	a.fileMu.RLock()
 	defer a.fileMu.RUnlock()
 	return a.cfg.File
+}
+
+func (a *App) currentTheme() string {
+	a.themeMu.RLock()
+	defer a.themeMu.RUnlock()
+	return a.theme
 }
 
 func errorPayload(filePath, message string) PreviewPayload {

@@ -1,6 +1,6 @@
-import { ChangeEvent, KeyboardEvent, MouseEvent, useEffect, useRef, useState } from "react";
+import { MouseEvent, useEffect, useRef, useState } from "react";
 import { EventsOff, EventsOn, OnFileDrop, OnFileDropOff } from "../wailsjs/runtime";
-import { ExportHTML, LoadMarkdown, OpenMarkdownFile, PrintPreview, SetFile } from "../wailsjs/go/main/App";
+import { LoadMarkdown, SetFile, SetTheme } from "../wailsjs/go/main/App";
 import "github-markdown-css/github-markdown.css";
 import Prism from "prismjs";
 import "prismjs/components/prism-markup";
@@ -38,21 +38,9 @@ type TocItem = {
 
 type ThemeName = "github-light" | "github-dark" | "github-sepia";
 
-type Theme = {
-	name: ThemeName;
-	label: string;
-	description: string;
-};
-
 type CodeBlockLanguage = string;
 
 const fallbackMarkup = "<p>No Markdown file is loaded. Open a file or pass one on the command line.</p>";
-
-const themes: Theme[] = [
-	{ name: "github-light", label: "GitHub Light", description: "Default style, close to the GitHub light reading theme." },
-	{ name: "github-dark", label: "GitHub Dark", description: "Dark mode with stronger contrast for low-light conditions." },
-	{ name: "github-sepia", label: "GitHub Sepia", description: "Warm, paper-like theme for long-form reading." },
-];
 
 const statusUnknown = "Loading preview...";
 const themeStorageKey = "md-preview.theme";
@@ -127,17 +115,6 @@ function getLanguageLabel(codeBlock: HTMLElement): string {
 	return language ? language.toUpperCase() : "";
 }
 
-function defaultExportPath(filePath: string): string {
-	const fallback = "document-preview.html";
-	const trimmed = filePath.trim();
-	if (!trimmed) {
-		return fallback;
-	}
-
-	const base = trimmed.replace(/\.markdown$/i, "").replace(/\.md$/i, "");
-	return `${base}-preview.html`;
-}
-
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
 	return new Promise((resolve, reject) => {
 		const timeout = window.setTimeout(() => reject(new Error(message)), timeoutMs);
@@ -155,7 +132,6 @@ function App() {
 		version: "",
 		renderedAt: "",
 	});
-	const [filePathInput, setFilePathInput] = useState("");
 	const [contentHtml, setContentHtml] = useState(fallbackMarkup);
 	const [busy, setBusy] = useState(true);
 	const [theme, setTheme] = useState<ThemeName>(() => {
@@ -215,13 +191,27 @@ function App() {
 				applyPayload(next);
 			}
 		};
+		const handleThemeChange = (nextTheme: ThemeName) => {
+			if (mounted) {
+				setTheme(nextTheme);
+			}
+		};
+		const handleStatusMessage = (message: string) => {
+			if (mounted) {
+				setActionMessage(message);
+			}
+		};
 
 		loadInitial();
 		EventsOn("markdown-updated", handleUpdate);
+		EventsOn("theme-changed", handleThemeChange);
+		EventsOn("status-message", handleStatusMessage);
 
 		return () => {
 			mounted = false;
 			EventsOff("markdown-updated");
+			EventsOff("theme-changed");
+			EventsOff("status-message");
 		};
 	}, []);
 
@@ -231,7 +221,6 @@ function App() {
 			if (!first) {
 				return;
 			}
-			setFilePathInput(first);
 			void loadFromPath(first);
 		};
 
@@ -245,6 +234,7 @@ function App() {
 	useEffect(() => {
 		document.documentElement.setAttribute("data-theme", theme);
 		window.localStorage.setItem(themeStorageKey, theme);
+		void SetTheme(theme);
 	}, [theme]);
 
 	useEffect(() => {
@@ -289,10 +279,6 @@ function App() {
 		Prism.highlightAllUnder(root);
 	}, [contentHtml]);
 
-	const onThemeChange = (event: ChangeEvent<HTMLSelectElement>) => {
-		setTheme(event.target.value as ThemeName);
-	};
-
 	const onTocNavigation = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
 		event.preventDefault();
 		const target = document.getElementById(id);
@@ -301,12 +287,8 @@ function App() {
 		}
 	};
 
-	const onFilePathChange = (event: ChangeEvent<HTMLInputElement>) => {
-		setFilePathInput(event.target.value);
-	};
-
-	const loadFromPath = async (pathValue?: string) => {
-		const trimmed = (pathValue ?? filePathInput).trim();
+	const loadFromPath = async (pathValue: string) => {
+		const trimmed = pathValue.trim();
 		if (!trimmed) {
 			setActionMessage("Please enter a Markdown file path.");
 			return;
@@ -321,127 +303,14 @@ function App() {
 		}
 	};
 
-	const openPathOnEnter = (event: KeyboardEvent<HTMLInputElement>) => {
-		if (event.key === "Enter") {
-			loadFromPath();
-		}
-	};
-
-	const openMarkdownFile = async () => {
-		try {
-			const next = await OpenMarkdownFile();
-			applyPayload(next);
-			setFilePathInput(next.filePath || filePathInput);
-			setActionMessage(next.error ? next.error : "File loaded.");
-		} catch {
-			setActionMessage("Failed to open Markdown file.");
-		}
-	};
-
-	const exportCurrentHtml = async () => {
-		if (!payload.filePath) {
-			setActionMessage("Open a Markdown file before exporting.");
-			return;
-		}
-
-		const suggestedPath = defaultExportPath(payload.filePath);
-		const target = window.prompt("Export HTML to path", suggestedPath);
-		if (target === null || !target.trim()) {
-			return;
-		}
-
-		try {
-			const saved = await ExportHTML(target, theme);
-			setActionMessage(`Exported HTML to: ${saved}`);
-		} catch (err) {
-			const message = err instanceof Error ? err.message : "Export failed";
-			setActionMessage(message);
-		}
-	};
-
-	const printToPDF = async () => {
-		try {
-			await PrintPreview();
-			setActionMessage("Print dialog opened. Choose Save as PDF to export PDF.");
-		} catch (err) {
-			const message = err instanceof Error ? err.message : "Print failed";
-			setActionMessage(message);
-		}
-	};
-
 	return (
 		<div className={`min-h-screen transition-colors duration-200 md-preview-root theme-shell-${theme}`}>
-			<div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-4">
-				<header className="md-preview-header">
-					<h1 className="truncate text-lg font-semibold md-preview-title">
-						{payload.filePath || "Markdown Preview"}
-					</h1>
-					<p className="mt-1 text-sm md-preview-subtle">
-						{busy ? statusUnknown : `Preview version ${payload.version || "N/A"}`}
-						{payload.renderedAt ? ` Updated ${payload.renderedAt}` : ""}
-					</p>
-					<div className="mt-3 flex items-center gap-2">
-						<label className="text-sm md-preview-subtle" htmlFor="theme-select">
-							Theme
-						</label>
-						<select
-							id="theme-select"
-							value={theme}
-							onChange={onThemeChange}
-							className="rounded-md border px-2 py-1 text-sm md-preview-select"
-						>
-							{themes.map((item) => (
-								<option key={item.name} value={item.name}>
-									{item.label}
-								</option>
-							))}
-						</select>
-						<p className="text-xs md-preview-subtle">
-							{themes.find((item) => item.name === theme)?.description}
-						</p>
+			<div className="mx-auto flex max-w-[1400px] flex-col gap-3 p-4">
+				{busy || actionMessage ? (
+					<div className="md-preview-status md-preview-subtle">
+						{busy ? statusUnknown : actionMessage}
 					</div>
-					<div className="mt-3 flex flex-wrap items-center gap-2">
-						<button
-							type="button"
-							onClick={exportCurrentHtml}
-							className="rounded-md border px-3 py-1.5 text-sm font-medium md-preview-select"
-						>
-							Export HTML
-						</button>
-						<button
-							type="button"
-							onClick={printToPDF}
-							className="rounded-md border px-3 py-1.5 text-sm font-medium md-preview-select"
-						>
-							Export PDF
-						</button>
-					</div>
-					<div className="mt-3 flex flex-wrap items-center gap-2">
-						<button
-							type="button"
-							onClick={openMarkdownFile}
-							className="rounded-md border px-3 py-1.5 text-sm font-medium md-preview-select"
-						>
-							Open File
-						</button>
-						<input
-							value={filePathInput}
-							onChange={onFilePathChange}
-							onKeyDown={openPathOnEnter}
-							placeholder="Paste Markdown file path and press Enter"
-							type="text"
-							className="min-w-[280px] flex-1 rounded-md border bg-transparent px-3 py-1.5 text-sm md-preview-select"
-						/>
-						<button
-							type="button"
-							onClick={() => loadFromPath()}
-							className="rounded-md border px-3 py-1.5 text-sm font-medium md-preview-select"
-						>
-							Load File
-						</button>
-					</div>
-					{actionMessage ? <p className="mt-2 text-xs md-preview-subtle">{actionMessage}</p> : null}
-				</header>
+				) : null}
 
 				{payload.error ? (
 					<div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">

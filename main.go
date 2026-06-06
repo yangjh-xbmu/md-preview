@@ -12,8 +12,11 @@ import (
 	"embed"
 
 	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/menu"
+	"github.com/wailsapp/wails/v2/pkg/menu/keys"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 //go:embed all:frontend/dist
@@ -129,6 +132,7 @@ func runDesktopApp(app *App) error {
 		Title:  "md-preview",
 		Width:  1280,
 		Height: 840,
+		Menu:   buildApplicationMenu(app),
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
@@ -138,6 +142,51 @@ func runDesktopApp(app *App) error {
 			app,
 		},
 	})
+}
+
+func buildApplicationMenu(app *App) *menu.Menu {
+	appMenu := menu.NewMenu()
+
+	fileMenu := appMenu.AddSubmenu("File")
+	fileMenu.AddText("Open Markdown...", keys.CmdOrCtrl("o"), func(*menu.CallbackData) {
+		payload := app.OpenMarkdownFile()
+		if payload.Error != "" {
+			emitStatus(app, payload.Error)
+		}
+	})
+	fileMenu.AddText("Export HTML...", keys.CmdOrCtrl("s"), func(*menu.CallbackData) {
+		if _, err := app.ExportHTMLWithDialog(); err != nil {
+			emitStatus(app, err.Error())
+		}
+	})
+	fileMenu.AddText("Print / Export PDF...", keys.CmdOrCtrl("p"), func(*menu.CallbackData) {
+		app.PrintPreview()
+	})
+	fileMenu.AddSeparator()
+	fileMenu.AddText("Quit", keys.CmdOrCtrl("q"), func(*menu.CallbackData) {
+		if app.ctx != nil {
+			runtime.Quit(app.ctx)
+		}
+	})
+
+	viewMenu := appMenu.AddSubmenu("View")
+	viewMenu.AddRadio("GitHub Light", true, nil, func(*menu.CallbackData) {
+		app.SetTheme("github-light")
+	})
+	viewMenu.AddRadio("GitHub Dark", false, nil, func(*menu.CallbackData) {
+		app.SetTheme("github-dark")
+	})
+	viewMenu.AddRadio("GitHub Sepia", false, nil, func(*menu.CallbackData) {
+		app.SetTheme("github-sepia")
+	})
+
+	return appMenu
+}
+
+func emitStatus(app *App, message string) {
+	if app.ctx != nil {
+		runtime.EventsEmit(app.ctx, "status-message", message)
+	}
 }
 
 func fileVersion(path string) (string, error) {
