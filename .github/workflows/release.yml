@@ -1,0 +1,107 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: windows
+            arch: amd64
+            ext: .exe
+          - os: macos-latest
+            target: darwin
+            arch: amd64
+            ext: ""
+          - os: macos-latest
+            target: darwin
+            arch: arm64
+            ext: ""
+          - os: ubuntu-latest
+            target: linux
+            arch: amd64
+            ext: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+
+      - name: Build
+        run: |
+          wails build -platform "${{ matrix.target }}/${{ matrix.arch }}" -o md-preview -clean
+        env:
+          CGO_ENABLED: 1
+
+      - name: Package (Windows)
+        if: matrix.target == 'windows'
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ARCHIVE="md-preview-v${VERSION}-${{ matrix.target }}-${{ matrix.arch }}.zip"
+          cd build/bin
+          7z a "../../$ARCHIVE" md-preview.exe
+          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+
+      - name: Package (macOS / Linux)
+        if: matrix.target != 'windows'
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          cd build/bin
+          ARCHIVE="md-preview-v${VERSION}-${{ matrix.target }}-${{ matrix.arch }}.tar.gz"
+          tar czf "../../$ARCHIVE" md-preview
+          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: md-preview-${{ matrix.target }}-${{ matrix.arch }}
+          path: ${{ env.ARCHIVE }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: md-preview-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: md-preview ${{ github.ref_name }}
+          body: |
+            ## Changes
+
+            - Markdown preview with goldmark + GFM
+            - Syntax highlighting (Prism.js) with 14 languages
+            - 3 built-in themes (Light, Dark, Sepia)
+            - Table of Contents sidebar
+            - Auto-copy selected text to clipboard
+            - Clean print output (no UI chrome)
+            - Keyboard shortcuts (Ctrl+O Open, Ctrl+S Export, Ctrl+P Print)
+          files: artifacts/*
+          draft: true
