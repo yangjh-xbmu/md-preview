@@ -374,7 +374,7 @@ func (a *App) renderMarkdown() PreviewPayload {
 	}
 
 	if a.ctx != nil {
-		runtime.WindowSetTitle(a.ctx, "md-preview - "+filepath.Base(filePath))
+		runtime.WindowSetTitle(a.ctx, filepath.Base(filePath))
 	}
 
 	source, err := os.ReadFile(filePath)
