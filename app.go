@@ -19,19 +19,37 @@ import (
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	gfmhtml "github.com/yuin/goldmark/renderer/html"
+	"gopkg.in/yaml.v3"
 )
 
 type PreviewPayload struct {
-	FilePath   string `json:"filePath"`
-	HTML       string `json:"html"`
-	Version    string `json:"version"`
-	RenderedAt string `json:"renderedAt"`
-	Error      string `json:"error,omitempty"`
+	FilePath    string          `json:"filePath"`
+	HTML        string          `json:"html"`
+	Version     string          `json:"version"`
+	RenderedAt  string          `json:"renderedAt"`
+	Error       string          `json:"error,omitempty"`
+	Frontmatter any `json:"frontmatter,omitempty"`
 }
 
 const watchInterval = time.Second
 
 var checkboxPolicy = regexp.MustCompile(`^checkbox$`)
+
+var frontmatterRe = regexp.MustCompile(`^---\r?\n([\s\S]*?)\r?\n---\r?\n`)
+
+func extractFrontmatter(source []byte) (any, []byte) {
+	matches := frontmatterRe.FindSubmatch(source)
+	if len(matches) < 2 {
+		return nil, source
+	}
+
+	var data map[string]any
+	if err := yaml.Unmarshal(matches[1], &data); err != nil {
+		return nil, source
+	}
+
+	return data, source[len(matches[0]):]
+}
 
 // App is bound into Wails and provides preview payloads to the frontend.
 type App struct {
@@ -382,8 +400,10 @@ func (a *App) renderMarkdown() PreviewPayload {
 		return errorPayload(filePath, fmt.Sprintf("cannot read Markdown file: %v", err))
 	}
 
+	fm, body := extractFrontmatter(source)
+
 	var rendered strings.Builder
-	if err := a.md.Convert(source, &byteBuffer{builder: &rendered}); err != nil {
+	if err := a.md.Convert(body, &byteBuffer{builder: &rendered}); err != nil {
 		return errorPayload(a.cfg.File, fmt.Sprintf("cannot render Markdown: %v", err))
 	}
 
@@ -393,10 +413,11 @@ func (a *App) renderMarkdown() PreviewPayload {
 	}
 
 	return PreviewPayload{
-		FilePath:   filePath,
-		HTML:       a.policy.Sanitize(rendered.String()),
-		Version:    version,
-		RenderedAt: time.Now().Format(time.RFC3339),
+		FilePath:    filePath,
+		HTML:        a.policy.Sanitize(rendered.String()),
+		Version:     version,
+		RenderedAt:  time.Now().Format(time.RFC3339),
+		Frontmatter: fm,
 	}
 }
 

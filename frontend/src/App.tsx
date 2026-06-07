@@ -30,6 +30,7 @@ import "prismjs/themes/prism.css";
 import "prismjs/plugins/line-numbers/prism-line-numbers";
 import "prismjs/plugins/line-numbers/prism-line-numbers.css";
 import "./App.css";
+import FrontmatterTable from "./FrontmatterTable";
 
 type PreviewPayload = {
 	filePath: string;
@@ -37,6 +38,7 @@ type PreviewPayload = {
 	version: string;
 	renderedAt: string;
 	error?: string;
+	frontmatter?: Record<string, unknown> | null;
 };
 
 type TocItem = {
@@ -148,6 +150,7 @@ function App() {
 		renderedAt: "",
 	});
 	const [contentHtml, setContentHtml] = useState(fallbackMarkup);
+	const [frontmatterData, setFrontmatterData] = useState<Record<string, unknown> | null>(null);
 	const [busy, setBusy] = useState(true);
 	const [theme, setTheme] = useState<ThemeName>(() => {
 		const saved = window.localStorage.getItem(themeStorageKey) as ThemeName | null;
@@ -166,12 +169,14 @@ function App() {
 		if (next.error) {
 			setContentHtml(fallbackMarkup);
 			setToc([]);
+			setFrontmatterData(null);
 			return;
 		}
 
 		const normalized = extractTocAndNormalizeHtml(next.html || "");
 		setContentHtml(normalized.html);
 		setToc(normalized.toc);
+		setFrontmatterData(typeof next.frontmatter === "object" && next.frontmatter !== null ? next.frontmatter as Record<string, unknown> : null);
 	};
 
 	useEffect(() => {
@@ -549,6 +554,7 @@ function App() {
 
 				<div className={`md-preview-content-layout ${showToc ? "" : "is-single-column"}`}>
 					<section className="md-preview-panel md-preview-main-panel">
+						<FrontmatterTable frontmatter={frontmatterData} />
 						<div ref={previewRef} className={`markdown-body theme-${theme}`} dangerouslySetInnerHTML={{ __html: contentHtml }} />
 					</section>
 

@@ -6,6 +6,7 @@ export namespace main {
 	    version: string;
 	    renderedAt: string;
 	    error?: string;
+	    frontmatter?: any;
 	
 	    static createFrom(source: any = {}) {
 	        return new PreviewPayload(source);
@@ -18,6 +19,7 @@ export namespace main {
 	        this.version = source["version"];
 	        this.renderedAt = source["renderedAt"];
 	        this.error = source["error"];
+	        this.frontmatter = source["frontmatter"];
 	    }
 	}
 

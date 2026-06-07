@@ -6,6 +6,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/wailsapp/wails/v2 v2.11.0
 	github.com/yuin/goldmark v1.8.2
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
