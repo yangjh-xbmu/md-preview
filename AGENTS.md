@@ -2,11 +2,11 @@
 
 ## Position
 
-Small Go CLI for previewing a local Markdown file as rendered GitHub-style HTML.
+Small Go and Wails app for previewing a local Markdown file as rendered GitHub-style HTML.
 
 ## Logic
 
-The CLI validates one `.md` or `.markdown` file, starts a local HTTP server, renders the file with goldmark GFM support, sanitizes generated HTML with bluemonday, and serves a built-in preview page. When watch mode is enabled, the browser polls `/status` and reloads after the file version changes.
+The CLI validates one `.md` or `.markdown` file, starts the Wails desktop app, renders the file with goldmark GFM and footnote support, sanitizes generated HTML with bluemonday, and serves the React preview surface. When watch mode is enabled, the desktop backend polls the file version and emits reload events after the file changes.
 
 ## Constraints
 
@@ -20,7 +20,9 @@ The CLI validates one `.md` or `.markdown` file, starts a local HTTP server, ren
 
 | Area | File | Purpose |
 | --- | --- | --- |
-| CLI and server | `main.go` | Argument parsing, validation, rendering, HTTP handlers, page template, browser launch |
+| CLI entry | `main.go` | Argument parsing, file validation, compatibility flags, Wails app startup |
+| Preview styles | `frontend/src/App.css` | Desktop shell, Markdown content, footnotes, themes, print and frontmatter styling |
+| Desktop backend | `app.go` | Wails binding, Markdown rendering, footnote sanitization, file watching, export and print actions |
 | Tests | `main_test.go` | CLI parsing, file validation, rendering safety, HTTP behavior |
 | User docs | `README.md` | Install, run, options, troubleshooting |
 | Dev docs | `CLAUDE.md` | Implementation notes and verification commands |

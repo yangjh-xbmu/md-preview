@@ -1,3 +1,6 @@
+// INPUT: md-preview backend functions, temporary Markdown files, JSON payloads.
+// OUTPUT: Unit coverage for argument parsing, rendering, sanitization, export and state helpers.
+// POS: Regression test suite for the md-preview Go backend.
 package main
 
 import (
@@ -110,6 +113,86 @@ func TestLoadMarkdownRendersAndSanitizes(t *testing.T) {
 	}
 	if !strings.Contains(payload.FilePath, md) {
 		t.Fatalf("expected file path in payload, got: %s", payload.FilePath)
+	}
+}
+
+func TestLoadMarkdownRendersFootnotes(t *testing.T) {
+	dir := t.TempDir()
+	md := filepath.Join(dir, "doc.md")
+	source := strings.Join([]string{
+		"正文引用。[^FN-WEI-WENXIAN-BAIMA-2019]",
+		"",
+		"[^FN-WEI-WENXIAN-BAIMA-2019]: 这里是脚注内容。",
+	}, "\n")
+	if err := os.WriteFile(md, []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := app.LoadMarkdown()
+	if payload.Error != "" {
+		t.Fatalf("expected success, got error %q", payload.Error)
+	}
+	if strings.Contains(payload.HTML, "[^FN-WEI-WENXIAN-BAIMA-2019]") {
+		t.Fatalf("expected footnote marker to be rendered, got: %s", payload.HTML)
+	}
+	if !strings.Contains(payload.HTML, `class="footnote-ref"`) {
+		t.Fatalf("expected footnote reference class, got: %s", payload.HTML)
+	}
+	if !strings.Contains(payload.HTML, `href="#fn:1"`) {
+		t.Fatalf("expected footnote reference link, got: %s", payload.HTML)
+	}
+	if !strings.Contains(payload.HTML, `id="fn:1"`) {
+		t.Fatalf("expected footnote target id, got: %s", payload.HTML)
+	}
+	if !strings.Contains(payload.HTML, `class="footnotes"`) {
+		t.Fatalf("expected footnotes block, got: %s", payload.HTML)
+	}
+	if !strings.Contains(payload.HTML, "这里是脚注内容") {
+		t.Fatalf("expected footnote content, got: %s", payload.HTML)
+	}
+	if !strings.Contains(payload.HTML, `role="doc-noteref"`) {
+		t.Fatalf("expected accessible footnote role, got: %s", payload.HTML)
+	}
+}
+
+func TestExportHTMLIncludesFootnoteStyles(t *testing.T) {
+	dir := t.TempDir()
+	md := filepath.Join(dir, "note.md")
+	content := strings.Join([]string{
+		"正文引用。[^note]",
+		"",
+		"[^note]: 导出的脚注。",
+	}, "\n")
+	if err := os.WriteFile(md, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outputPath, err := app.ExportHTML("", "github-light")
+	if err != nil {
+		t.Fatalf("expected export success: %v", err)
+	}
+	defer os.Remove(outputPath)
+
+	raw, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("expected exported file: %v", err)
+	}
+
+	exported := string(raw)
+	if !strings.Contains(exported, ".markdown-body .footnotes") {
+		t.Fatalf("expected exported footnote styles, got: %s", exported)
+	}
+	if !strings.Contains(exported, `class="footnotes"`) {
+		t.Fatalf("expected exported footnotes block, got: %s", exported)
 	}
 }
 

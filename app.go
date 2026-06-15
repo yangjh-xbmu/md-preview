@@ -1,3 +1,6 @@
+// INPUT: CLI config, Markdown files, Wails runtime, goldmark, bluemonday, YAML frontmatter.
+// OUTPUT: Wails-bound preview application, sanitized rendered HTML, export and print actions.
+// POS: Desktop app backend and Markdown rendering core for md-preview.
 package main
 
 import (
@@ -23,12 +26,12 @@ import (
 )
 
 type PreviewPayload struct {
-	FilePath    string          `json:"filePath"`
-	HTML        string          `json:"html"`
-	Version     string          `json:"version"`
-	RenderedAt  string          `json:"renderedAt"`
-	Error       string          `json:"error,omitempty"`
-	Frontmatter any `json:"frontmatter,omitempty"`
+	FilePath    string `json:"filePath"`
+	HTML        string `json:"html"`
+	Version     string `json:"version"`
+	RenderedAt  string `json:"renderedAt"`
+	Error       string `json:"error,omitempty"`
+	Frontmatter any    `json:"frontmatter,omitempty"`
 }
 
 const watchInterval = time.Second
@@ -36,6 +39,12 @@ const watchInterval = time.Second
 var checkboxPolicy = regexp.MustCompile(`^checkbox$`)
 
 var frontmatterRe = regexp.MustCompile(`^---\r?\n([\s\S]*?)\r?\n---\r?\n`)
+
+var footnoteIDPolicy = regexp.MustCompile(`^fn(ref[0-9]*)?:[^\s"'<>]+$`)
+
+var footnoteClassPolicy = regexp.MustCompile(`^(footnotes|footnote-ref|footnote-backref)$`)
+
+var footnoteRolePolicy = regexp.MustCompile(`^doc-(noteref|endnotes|backlink)$`)
 
 func extractFrontmatter(source []byte) (any, []byte) {
 	matches := frontmatterRe.FindSubmatch(source)
@@ -191,6 +200,81 @@ const exportHTMLTemplate = `<!doctype html>
   .markdown-body td {
     border: 1px solid #d8dee4;
     padding: 0.5rem;
+  }
+
+  .markdown-body .footnotes {
+    border-top: 1px solid #d0d7de;
+    color: #4b5563;
+    font-size: 0.875rem;
+    line-height: 1.65;
+    margin-top: 2rem;
+    padding-top: 1.15rem;
+  }
+
+  .markdown-body .footnotes hr {
+    display: none;
+  }
+
+  .markdown-body .footnotes ol {
+    margin: 0;
+    padding-left: 1.5rem;
+  }
+
+  .markdown-body .footnotes li {
+    border-radius: 0.375rem;
+    padding: 0.2rem 0.45rem;
+  }
+
+  .markdown-body .footnotes li::marker {
+    color: #6b7280;
+    font-weight: 600;
+  }
+
+  .markdown-body .footnotes li p {
+    margin: 0;
+  }
+
+  .markdown-body .footnotes li:target {
+    background: #edf5ff;
+    box-shadow: inset 3px 0 0 #0969da;
+    color: #1f2937;
+    outline: none;
+  }
+
+  .markdown-body .footnote-ref,
+  .markdown-body .footnote-backref {
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .markdown-body.theme-github-dark .footnotes {
+    border-top-color: #30363d;
+    color: #adbac7;
+  }
+
+  .markdown-body.theme-github-dark .footnotes li::marker {
+    color: #8b949e;
+  }
+
+  .markdown-body.theme-github-dark .footnotes li:target {
+    background: #1f2937;
+    box-shadow: inset 3px 0 0 #58a6ff;
+    color: #dbeafe;
+  }
+
+  .markdown-body.theme-github-sepia .footnotes {
+    border-top-color: #c4aa70;
+    color: #5f4b32;
+  }
+
+  .markdown-body.theme-github-sepia .footnotes li::marker {
+    color: #8a6f3c;
+  }
+
+  .markdown-body.theme-github-sepia .footnotes li:target {
+    background: #efe0bd;
+    box-shadow: inset 3px 0 0 #8a5f1f;
+    color: #3f2f18;
   }
 </style>
 </head>
@@ -544,7 +628,7 @@ func errorPayload(filePath, message string) PreviewPayload {
 
 func newRenderer() goldmark.Markdown {
 	return goldmark.New(
-		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithExtensions(extension.GFM, extension.Footnote),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
 		goldmark.WithRendererOptions(gfmhtml.WithXHTML()),
 	)
@@ -556,5 +640,8 @@ func markdownPolicy() *bluemonday.Policy {
 	policy.AllowAttrs("type").Matching(checkboxPolicy).OnElements("input")
 	policy.AllowAttrs("checked", "disabled").OnElements("input")
 	policy.AllowAttrs("class").Matching(regexp.MustCompile(`^language-[A-Za-z0-9_-]+$`)).OnElements("code")
+	policy.AllowAttrs("id").Matching(footnoteIDPolicy).OnElements("sup", "li")
+	policy.AllowAttrs("class").Matching(footnoteClassPolicy).OnElements("a", "div")
+	policy.AllowAttrs("role").Matching(footnoteRolePolicy).OnElements("a", "div")
 	return policy
 }
