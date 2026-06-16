@@ -1,6 +1,10 @@
 # SESSION LOG
 
 ## 完成
+- 2026-06-16 添加 goldmark-wikilink 扩展，支持 [[页面名]]、[[文件.pdf]]、[[页面|别名]] 三种 wiki 链接语法渲染
+- 2026-06-16 实现 wiki 链接点击跳转：前端拦截链接点击，后端 ResolveWikiLink 将 .html href 解码并查找同目录 .md 文件
+- 2026-06-16 实现导航历史栈：Alt+← 返回、Alt+→ 前进，菜单添加 Back/Forward 按钮，状态栏提示快捷键
+- 2026-06-16 创建 Wiki-Demo.md 演示文件，README wiki 链接指向真实文件，推送 v0.0.8 release tag
 - 2026-06-06 修复 GitHub Actions Release workflow，经 7 次迭代使四个平台（Win/macOS Intel/macOS ARM/Linux）全部构建成功并生成 Draft Release
 - 2026-06-06 清理失败标签和旧 Release（v1.0.0/v1.1.0/v0.0.1-v0.0.6），仅保留 v0.0.7
 - 2026-06-06 左键选中正文文本自动复制到系统剪贴板，匹配 WezTerm 交互体验
@@ -21,6 +25,8 @@
 - 2026-06-06 撰写并推送 Obsidian 技术笔记《Wails 与 Vite 桌面应用空白页排查》到 MyNotes Inbox。
 
 ## 发现
+- 2026-06-16 goldmark-wikilink（go.abhg.dev/goldmark/wikilink）默认将 [[Foo Bar]] 渲染为 `<a href="Foo%20Bar.html">Foo Bar</a>`，空格被 URL 编码，后端需反向解码再查找 .md 文件
+- 2026-06-16 Wails WebView 中点击链接不会自动导航，需前端手动拦截 click 事件、调用后端方法加载目标文件
 - 2026-06-06 GitHub Actions macOS Wails build 产物是 .app 包而非裸二进制，打包需用 tar czf md-preview.app
 - 2026-06-06 GitHub Actions Windows runner 上 Wails build -o 生成的二进制可能不带 .exe 扩展名
 - 2026-06-06 go install wails CLI 的正确路径是 github.com/wailsapp/wails/v2/cmd/wails@version，非 v2 裸包
