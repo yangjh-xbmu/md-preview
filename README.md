@@ -8,6 +8,7 @@
 
 - **Markdown 渲染**：goldmark + GFM（表格、任务列表、删除线等），经 bluemonday 安全过滤
 - **脚注渲染**：支持 `[^note]` 与 `[^note]: ...` 形式的 Markdown 脚注
+- **Wiki 链接**：支持 `[[页面名]]`、`[[文件.pdf]]` 和 `[[页面|显示文本]]` 语法的双向链接
 - **Frontmatter 渲染**：自动解析 YAML frontmatter，以 GitHub 风格属性表展示，支持嵌套对象、数组标签、链接识别，跟随主题适配
 - **语法高亮**：Prism.js 支持 14 种编程语言，带行号显示和代码块复制按钮
 - **文件监听**：1 秒轮询，文件变更自动刷新预览
@@ -34,6 +35,26 @@
 [^FN-WEI-WENXIAN-BAIMA-2019]: 魏文贤：《白马藏族语言使用现状调查》，2019。
 ```
 
+## Wiki 链接示例
+
+Wiki 链接是 Obsidian 等笔记工具常用的双向链接语法。md-preview 支持三种写法：
+
+- `[[Foo Bar]]` → 渲染为链接到 `Foo Bar.html` 的超链接，显示文本为"Foo Bar"
+- `[[baz.pdf]]` → 已有扩展名时保持原样，链接到 `baz.pdf`
+- `[[Image|display text]]` → 管道符后为显示文本，链接到 `Image.html`，显示"display text"
+
+点击 Wiki 链接会自动在同目录下查找对应的 `.md` 文件并加载预览。导航后可用 `Alt+←` 返回，`Alt+→` 前进，与浏览器一致。
+
+下面是实际渲染案例：
+
+这是一个普通 wiki 链接 [[Wiki-Demo]]，带别名的链接 [[Wiki-Demo|点击跳转演示页]]。
+
+对应的 Markdown 源码写法如下：
+
+```markdown
+这是一个普通 wiki 链接 [[Wiki-Demo]]，带别名的链接 [[Wiki-Demo|点击跳转演示页]]。
+```
+
 ## 键盘快捷键
 
 | 快捷键 | 功能 |
@@ -42,6 +63,8 @@
 | `Ctrl+S` | 导出 HTML |
 | `Ctrl+P` | 打印 / 导出 PDF |
 | `Ctrl+T` | 显示 / 隐藏目录导航 |
+| `Alt+←` | 返回上一个文档（Wiki 链接导航） |
+| `Alt+→` | 前进到下一个文档（Wiki 链接导航） |
 | `F11` | 全屏 / 退出全屏 |
 
 ## 安装与运行

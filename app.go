@@ -22,6 +22,7 @@ import (
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	gfmhtml "github.com/yuin/goldmark/renderer/html"
+	"go.abhg.dev/goldmark/wikilink"
 	"gopkg.in/yaml.v3"
 )
 
@@ -354,6 +355,44 @@ func (a *App) SetFile(path string) PreviewPayload {
 	return payload
 }
 
+// ResolveWikiLink resolves a wiki link href to an absolute .md file path.
+// Returns empty string if the target file does not exist or is not a Markdown file.
+func (a *App) ResolveWikiLink(href string) string {
+	href = strings.TrimSpace(href)
+	if href == "" {
+		return ""
+	}
+
+	decoded := strings.ReplaceAll(href, "%20", " ")
+	decoded = strings.ReplaceAll(decoded, "%5B", "[")
+	decoded = strings.ReplaceAll(decoded, "%5D", "]")
+
+	if strings.HasSuffix(decoded, ".html") || strings.HasSuffix(decoded, ".htm") {
+		decoded = decoded[:strings.LastIndex(decoded, ".")] + ".md"
+	} else if filepath.Ext(decoded) == "" {
+		decoded += ".md"
+	} else {
+		return ""
+	}
+
+	current := a.currentFilePath()
+	if current == "" {
+		return ""
+	}
+
+	candidate := filepath.Join(filepath.Dir(current), decoded)
+	absPath, err := filepath.Abs(candidate)
+	if err != nil {
+		return ""
+	}
+
+	if err := validateMarkdownFile(absPath); err != nil {
+		return ""
+	}
+
+	return absPath
+}
+
 // SetTheme updates the active preview theme and notifies the frontend.
 func (a *App) SetTheme(theme string) string {
 	next := sanitizeTheme(theme)
@@ -628,7 +667,7 @@ func errorPayload(filePath, message string) PreviewPayload {
 
 func newRenderer() goldmark.Markdown {
 	return goldmark.New(
-		goldmark.WithExtensions(extension.GFM, extension.Footnote),
+		goldmark.WithExtensions(extension.GFM, extension.Footnote, &wikilink.Extender{}),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
 		goldmark.WithRendererOptions(gfmhtml.WithXHTML()),
 	)

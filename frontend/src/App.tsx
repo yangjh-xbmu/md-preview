@@ -9,7 +9,7 @@ import {
 	WindowIsFullscreen,
 	WindowUnfullscreen,
 } from "../wailsjs/runtime";
-import { ExportHTMLWithDialog, LoadMarkdown, OpenMarkdownFile, PrintPreview, SetFile, SetTheme } from "../wailsjs/go/main/App";
+import { ExportHTMLWithDialog, LoadMarkdown, OpenMarkdownFile, PrintPreview, ResolveWikiLink, SetFile, SetTheme } from "../wailsjs/go/main/App";
 import "github-markdown-css/github-markdown.css";
 import Prism from "prismjs";
 import "prismjs/components/prism-markup";
@@ -161,10 +161,12 @@ function App() {
 	const [fullscreen, setFullscreen] = useState(false);
 	const [actionMessage, setActionMessage] = useState("");
 	const [menuOpen, setMenuOpen] = useState(false);
+	const navHistory = useRef<string[]>([]);
+	const navIndex = useRef(-1);
 	const previewRef = useRef<HTMLDivElement | null>(null);
 	const menuRef = useRef<HTMLDivElement | null>(null);
 
-	const applyPayload = (next: PreviewPayload) => {
+	const applyPayload = (next: PreviewPayload, addToHistory = true) => {
 		setPayload(next);
 		if (next.error) {
 			setContentHtml(fallbackMarkup);
@@ -177,6 +179,17 @@ function App() {
 		setContentHtml(normalized.html);
 		setToc(normalized.toc);
 		setFrontmatterData(typeof next.frontmatter === "object" && next.frontmatter !== null ? next.frontmatter as Record<string, unknown> : null);
+
+		if (addToHistory && next.filePath && !next.error) {
+			const hist = navHistory.current;
+			const idx = navIndex.current;
+			if (idx >= 0 && idx < hist.length && hist[idx] === next.filePath) {
+				return;
+			}
+			hist.splice(idx + 1);
+			hist.push(next.filePath);
+			navIndex.current = hist.length - 1;
+		}
 	};
 
 	useEffect(() => {
@@ -292,6 +305,16 @@ function App() {
 				void toggleFullscreen();
 				return;
 			}
+			if (event.altKey && event.key === "ArrowLeft") {
+				event.preventDefault();
+				void navigateBack();
+				return;
+			}
+			if (event.altKey && event.key === "ArrowRight") {
+				event.preventDefault();
+				void navigateForward();
+				return;
+			}
 
 			if (!event.ctrlKey && !event.metaKey) {
 				return;
@@ -385,6 +408,39 @@ function App() {
 		return () => previewEl.removeEventListener("mouseup", handleMouseUp);
 	}, []);
 
+		useEffect(() => {
+			const previewEl = previewRef.current;
+			if (!previewEl) return;
+
+			const handleClick = (event: MouseEvent) => {
+				const anchor = (event.target as HTMLElement).closest("a") as HTMLAnchorElement | null;
+				if (!anchor) return;
+
+				const href = anchor.getAttribute("href") || "";
+				if (!href || href.startsWith("#") || href.startsWith("http://") || href.startsWith("https://") || href.startsWith("mailto:")) return;
+
+				event.preventDefault();
+
+				void (async () => {
+					try {
+						const resolved = await ResolveWikiLink(href);
+						if (!resolved) {
+							setActionMessage(`Wiki link target not found: ${href}`);
+							return;
+						}
+						const next = await SetFile(resolved);
+						applyPayload(next);
+						setActionMessage(next.error ? next.error : `Navigated to ${resolved}  (Alt+← back, Alt+→ forward)`);
+					} catch {
+						setActionMessage(`Failed to resolve wiki link: ${href}`);
+					}
+				})();
+			};
+
+			previewEl.addEventListener("click", handleClick);
+			return () => previewEl.removeEventListener("click", handleClick);
+		}, [contentHtml]);
+
 	const onTocNavigation = (event: MouseEvent, id: string) => {
 		event.preventDefault();
 		const target = document.getElementById(id);
@@ -393,6 +449,40 @@ function App() {
 		}
 	};
 
+
+		const navigateBack = async () => {
+			const hist = navHistory.current;
+			const idx = navIndex.current;
+			if (idx <= 0) {
+				setActionMessage("No previous page.");
+				return;
+			}
+			navIndex.current = idx - 1;
+			try {
+				const next = await SetFile(hist[navIndex.current]);
+				applyPayload(next, false);
+				setActionMessage("Navigated back  (Alt+← back, Alt+→ forward)");
+			} catch {
+				setActionMessage("Failed to navigate back.");
+			}
+		};
+
+		const navigateForward = async () => {
+			const hist = navHistory.current;
+			const idx = navIndex.current;
+			if (idx >= hist.length - 1) {
+				setActionMessage("No next page.");
+				return;
+			}
+			navIndex.current = idx + 1;
+			try {
+				const next = await SetFile(hist[navIndex.current]);
+				applyPayload(next, false);
+				setActionMessage("Navigated forward  (Alt+← back, Alt+→ forward)");
+			} catch {
+				setActionMessage("Failed to navigate forward.");
+			}
+		};
 	const loadFromPath = async (pathValue: string) => {
 		const trimmed = pathValue.trim();
 		if (!trimmed) {
@@ -517,6 +607,14 @@ function App() {
 								<span>{fullscreen ? "Exit Full Screen" : "Full Screen"}</span>
 								<kbd>F11</kbd>
 							</button>
+								<button type="button" role="menuitem" className="md-menu-item" onClick={() => { setMenuOpen(false); void navigateBack(); }}>
+									<span>Back</span>
+									<kbd>Alt ←</kbd>
+								</button>
+								<button type="button" role="menuitem" className="md-menu-item" onClick={() => { setMenuOpen(false); void navigateForward(); }}>
+									<span>Forward</span>
+									<kbd>Alt →</kbd>
+								</button>
 						</div>
 
 						<div className="md-menu-section">

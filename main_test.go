@@ -159,6 +159,76 @@ func TestLoadMarkdownRendersFootnotes(t *testing.T) {
 	}
 }
 
+func TestLoadMarkdownRendersWikiLinks(t *testing.T) {
+	dir := t.TempDir()
+	md := filepath.Join(dir, "doc.md")
+	source := strings.Join([]string{
+		"See [[Foo Bar]] and [[baz.pdf]] also [[Image|display text]]",
+	}, "\n")
+	if err := os.WriteFile(md, []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := app.LoadMarkdown()
+	if payload.Error != "" {
+		t.Fatalf("expected success, got error %q", payload.Error)
+	}
+	if !strings.Contains(payload.HTML, `href="Foo%20Bar.html"`) {
+		t.Fatalf("expected wikilink with space-encoded href, got: %s", payload.HTML)
+	}
+	if !strings.Contains(payload.HTML, ">Foo Bar<") {
+		t.Fatalf("expected wikilink display text, got: %s", payload.HTML)
+	}
+	if !strings.Contains(payload.HTML, `href="baz.pdf"`) {
+		t.Fatalf("expected wikilink with extension preserved, got: %s", payload.HTML)
+	}
+	if !strings.Contains(payload.HTML, `href="Image.html"`) {
+		t.Fatalf("expected wikilink with alias href, got: %s", payload.HTML)
+	}
+	if !strings.Contains(payload.HTML, ">display text<") {
+		t.Fatalf("expected wikilink alias display text, got: %s", payload.HTML)
+	}
+}
+
+func TestResolveWikiLink(t *testing.T) {
+	dir := t.TempDir()
+	md := filepath.Join(dir, "doc.md")
+	target := filepath.Join(dir, "Foo Bar.md")
+	if err := os.WriteFile(md, []byte("# doc"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("# Foo Bar"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resolved := app.ResolveWikiLink("Foo%20Bar.html")
+	if resolved == "" {
+		t.Fatal("expected resolved path for Foo%20Bar.html")
+	}
+	if !strings.HasSuffix(resolved, "Foo Bar.md") {
+		t.Fatalf("expected path ending with 'Foo Bar.md', got: %s", resolved)
+	}
+
+	// non-existent target returns empty
+	if app.ResolveWikiLink("Missing.html") != "" {
+		t.Fatal("expected empty string for missing wiki link target")
+	}
+
+	// non-.html href returns empty (not a wiki link)
+	if app.ResolveWikiLink("https://example.com") != "" {
+		t.Fatal("expected empty string for external URL")
+	}
+}
+
 func TestExportHTMLIncludesFootnoteStyles(t *testing.T) {
 	dir := t.TempDir()
 	md := filepath.Join(dir, "note.md")

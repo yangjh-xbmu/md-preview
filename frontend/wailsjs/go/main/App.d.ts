@@ -18,6 +18,8 @@ export function OpenMarkdownFile():Promise<main.PreviewPayload>;
 
 export function PrintPreview():Promise<void>;
 
+export function ResolveWikiLink(arg1:string):Promise<string>;
+
 export function SetFile(arg1:string):Promise<main.PreviewPayload>;
 
 export function SetTheme(arg1:string):Promise<string>;
