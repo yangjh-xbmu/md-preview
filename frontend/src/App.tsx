@@ -321,6 +321,22 @@ function App() {
 			}
 
 			const key = event.key.toLowerCase();
+			if (key === "c") {
+				const text = window.getSelection()?.toString() ?? "";
+				if (text.trim()) {
+					event.preventDefault();
+					void ClipboardSetText(text);
+				}
+				return;
+			}
+			if (key === "a") {
+				event.preventDefault();
+				const selection = document.getSelection();
+				if (selection && previewRef.current) {
+					selection.selectAllChildren(previewRef.current);
+				}
+				return;
+			}
 			if (key === "o") {
 				event.preventDefault();
 				void openMarkdownFile();
@@ -408,7 +424,7 @@ function App() {
 		return () => previewEl.removeEventListener("mouseup", handleMouseUp);
 	}, []);
 
-		useEffect(() => {
+	useEffect(() => {
 			const previewEl = previewRef.current;
 			if (!previewEl) return;
 
