@@ -116,6 +116,26 @@ func TestLoadMarkdownRendersAndSanitizes(t *testing.T) {
 	}
 }
 
+func TestLoadMarkdownRendersHeadingWithUTF8BOM(t *testing.T) {
+	dir := t.TempDir()
+	md := filepath.Join(dir, "doc.md")
+	if err := os.WriteFile(md, []byte("\ufeff# Title\n\nBody"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := app.LoadMarkdown()
+	if payload.Error != "" {
+		t.Fatalf("expected success, got error %q", payload.Error)
+	}
+	if !strings.Contains(payload.HTML, "<h1") || strings.Contains(payload.HTML, "\ufeff# Title") {
+		t.Fatalf("expected BOM-prefixed heading to render, got: %s", payload.HTML)
+	}
+}
+
 func TestLoadMarkdownRendersFootnotes(t *testing.T) {
 	dir := t.TempDir()
 	md := filepath.Join(dir, "doc.md")

@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -41,6 +42,8 @@ var checkboxPolicy = regexp.MustCompile(`^checkbox$`)
 
 var frontmatterRe = regexp.MustCompile(`^---\r?\n([\s\S]*?)\r?\n---\r?\n`)
 
+var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
+
 var footnoteIDPolicy = regexp.MustCompile(`^fn(ref[0-9]*)?:[^\s"'<>]+$`)
 
 var footnoteClassPolicy = regexp.MustCompile(`^(footnotes|footnote-ref|footnote-backref)$`)
@@ -48,6 +51,8 @@ var footnoteClassPolicy = regexp.MustCompile(`^(footnotes|footnote-ref|footnote-
 var footnoteRolePolicy = regexp.MustCompile(`^doc-(noteref|endnotes|backlink)$`)
 
 func extractFrontmatter(source []byte) (any, []byte) {
+	source = bytes.TrimPrefix(source, utf8BOM)
+
 	matches := frontmatterRe.FindSubmatch(source)
 	if len(matches) < 2 {
 		return nil, source
