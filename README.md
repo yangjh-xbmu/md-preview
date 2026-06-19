@@ -1,3 +1,12 @@
+---
+purpose: 一个使用 Go + Wails + React + Tailwind 构建的本地 Markdown 预览桌面应用，提供稳定、干净的渲染体验。
+status: active
+next_steps: []
+capabilities:
+  - markdown-preview
+  - gfm-rendering
+  - desktop-app
+---
 # md-preview
 
 一个小型本地 Markdown 预览桌面应用，使用 Go + Wails + React + Tailwind 构建。
