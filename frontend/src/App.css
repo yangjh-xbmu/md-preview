@@ -335,6 +335,13 @@
   font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
 }
 
+.markdown-body .token.tag {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
 .markdown-body pre {
   position: relative;
 }
@@ -437,8 +444,24 @@
   background: #161b22;
 }
 
+.markdown-body.theme-github-dark table th {
+  background-color: #161b22;
+  color: #f0f6fc;
+  border-color: #30363d;
+}
+
+.markdown-body.theme-github-dark table td {
+  border-color: #30363d;
+  color: #c9d1d9;
+}
+
 .markdown-body.theme-github-dark table tr {
-  background: #0d1117;
+  background-color: #0d1117;
+  border-top: 1px solid #30363d;
+}
+
+.markdown-body.theme-github-dark table tr:nth-child(2n) {
+  background-color: #161b22;
 }
 
 .markdown-body.theme-github-dark blockquote {
@@ -466,6 +489,26 @@
   background: #f7efdd;
 }
 
+.markdown-body.theme-github-sepia table th {
+  background-color: #ead5a7;
+  color: #3f2f18;
+  border-color: rgba(132, 102, 56, 0.35);
+}
+
+.markdown-body.theme-github-sepia table td {
+  border-color: rgba(132, 102, 56, 0.35);
+  color: #5f4b32;
+}
+
+.markdown-body.theme-github-sepia table tr {
+  background-color: #f7efdd;
+  border-top: 1px solid rgba(132, 102, 56, 0.35);
+}
+
+.markdown-body.theme-github-sepia table tr:nth-child(2n) {
+  background-color: #efe0c8;
+}
+
 .markdown-body.theme-github-sepia a {
   color: #8a5f1f;
 }
@@ -484,6 +527,60 @@
 .markdown-body.theme-github-sepia pre code {
   background: transparent;
   color: #3f2f18;
+}
+
+/* Sepia Theme Syntax Highlighting */
+.markdown-body.theme-github-sepia .token.comment,
+.markdown-body.theme-github-sepia .token.prolog,
+.markdown-body.theme-github-sepia .token.doctype,
+.markdown-body.theme-github-sepia .token.cdata {
+  color: #7a6b58;
+}
+
+.markdown-body.theme-github-sepia .token.punctuation {
+  color: #6e5d4f;
+}
+
+.markdown-body.theme-github-sepia .token.property,
+.markdown-body.theme-github-sepia .token.tag,
+.markdown-body.theme-github-sepia .token.boolean,
+.markdown-body.theme-github-sepia .token.number,
+.markdown-body.theme-github-sepia .token.constant,
+.markdown-body.theme-github-sepia .token.symbol,
+.markdown-body.theme-github-sepia .token.deleted {
+  color: #a03030;
+}
+
+.markdown-body.theme-github-sepia .token.selector,
+.markdown-body.theme-github-sepia .token.attr-name,
+.markdown-body.theme-github-sepia .token.string,
+.markdown-body.theme-github-sepia .token.char,
+.markdown-body.theme-github-sepia .token.builtin,
+.markdown-body.theme-github-sepia .token.inserted {
+  color: #4b6a13;
+}
+
+.markdown-body.theme-github-sepia .token.operator,
+.markdown-body.theme-github-sepia .token.entity,
+.markdown-body.theme-github-sepia .token.url {
+  color: #8a5f1f;
+}
+
+.markdown-body.theme-github-sepia .token.atrule,
+.markdown-body.theme-github-sepia .token.attr-value,
+.markdown-body.theme-github-sepia .token.keyword {
+  color: #1b4f72;
+}
+
+.markdown-body.theme-github-sepia .token.function,
+.markdown-body.theme-github-sepia .token.class-name {
+  color: #9b2c2c;
+}
+
+.markdown-body.theme-github-sepia .token.regex,
+.markdown-body.theme-github-sepia .token.important,
+.markdown-body.theme-github-sepia .token.variable {
+  color: #b25900;
 }
 
 .markdown-body.theme-github-sepia .highlight {
@@ -513,6 +610,26 @@
 .markdown-body.theme-github-light {
   color: #24292f;
   background: #fff;
+}
+
+.markdown-body.theme-github-light table th {
+  background-color: #f6f8fa;
+  color: #24292f;
+  border-color: #d0d7de;
+}
+
+.markdown-body.theme-github-light table td {
+  border-color: #d0d7de;
+  color: #24292f;
+}
+
+.markdown-body.theme-github-light table tr {
+  background-color: #ffffff;
+  border-top: 1px solid #d0d7de;
+}
+
+.markdown-body.theme-github-light table tr:nth-child(2n) {
+  background-color: #f6f8fa;
 }
 
 @media print {
