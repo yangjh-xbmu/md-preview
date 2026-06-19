@@ -26,3 +26,8 @@ The CLI validates one `.md` or `.markdown` file, starts the Wails desktop app, r
 | Tests | `main_test.go` | CLI parsing, file validation, rendering safety, HTTP behavior |
 | User docs | `README.md` | Install, run, options, troubleshooting |
 | Dev docs | `CLAUDE.md` | Implementation notes and verification commands |
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read `specs/001-set-app-icon/plan.md`.
+<!-- SPECKIT END -->
