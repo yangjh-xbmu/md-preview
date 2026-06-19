@@ -1,6 +1,10 @@
 # SESSION LOG
 
 ## 完成
+- 2026-06-19 修复 Markdown 文件以 UTF-8 BOM 开头时首行一级标题被当作普通段落的问题，并增加回归测试。
+- 2026-06-19 初始化并提交 Spec Kit 与 speckit-superpowers-bridge 工作流，后续开发默认通过 spec、plan、tasks 和 handoff 执行。
+- 2026-06-19 按 speckit bridge 流程将指定 SVG 转换为 md-preview 应用图标，更新 build/appicon.png 与 build/windows/icon.ico，并完成 Wails 构建验证。
+- 2026-06-19 将 UTF-8 BOM 标题排查经验写入 Obsidian Inbox，并预览 README 确认当前文档展示合适。
 - 2026-06-16 修复 Wails WebView2 中选择文本后无法粘贴的问题：添加 Ctrl+C 复制和 Ctrl+A 全选的 JS 层拦截，调用 ClipboardSetText 写入系统剪贴板
 - 2026-06-16 添加 goldmark-wikilink 扩展，支持 [[页面名]]、[[文件.pdf]]、[[页面|别名]] 三种 wiki 链接语法渲染
 - 2026-06-16 实现 wiki 链接点击跳转：前端拦截链接点击，后端 ResolveWikiLink 将 .html href 解码并查找同目录 .md 文件
@@ -26,6 +30,10 @@
 - 2026-06-06 撰写并推送 Obsidian 技术笔记《Wails 与 Vite 桌面应用空白页排查》到 MyNotes Inbox。
 
 ## 发现
+- 2026-06-19 goldmark 不会把带 UTF-8 BOM 前缀的首行 # 识别为 ATX 标题，渲染前应先去掉文件开头 BOM。
+- 2026-06-19 Wails Windows 图标使用 build/windows/icon.ico，缺失时会从 build/appicon.png 生成，替换应用图标应同时维护这两个资产。
+- 2026-06-19 本机全局 git ignore 会忽略 build/，需要用 git add -f 收纳 Wails 图标资产。
+- 2026-06-19 specify extension add 的 --force 只表示覆盖已安装扩展，外部 URL 的非交互信任确认仍需用 yes y 管道输入。
 - 2026-06-16 Wails v2 在 Windows 上默认设置 `AreBrowserAcceleratorKeysEnabled = false`，禁用 WebView2 内置的 Ctrl+C/V/X/A 等浏览器加速键，需在 JS 层手动拦截并调用 ClipboardSetText
 - 2026-06-16 goldmark-wikilink（go.abhg.dev/goldmark/wikilink）默认将 [[Foo Bar]] 渲染为 `<a href="Foo%20Bar.html">Foo Bar</a>`，空格被 URL 编码，后端需反向解码再查找 .md 文件
 - 2026-06-16 Wails WebView 中点击链接不会自动导航，需前端手动拦截 click 事件、调用后端方法加载目标文件
