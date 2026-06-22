@@ -11,8 +11,10 @@
 ## 关键实现
 
 - `main.go`: CLI 参数解析与 Wails 启动。
-- `app.go`: `App` 结构体、`LoadMarkdown`、`CurrentVersion`、文件监听和事件发送（`markdown-updated`）。
-- `frontend/src/App.tsx`: GitHub 风格 Markdown 展示界面，订阅 `markdown-updated`。
+- `app.go`: `App` 结构体、`LoadMarkdown`、`CurrentVersion`、文件监听和事件发送（`markdown-updated`）。`exportHTMLTemplate` 内嵌 Mermaid CDN 与初始化脚本，导出 HTML 在浏览器打开时自动渲染 mermaid 代码块。
+- `frontend/src/App.tsx`: GitHub 风格 Markdown 展示界面，订阅 `markdown-updated`。`contentHtml` 与 `theme` 联合 effect 调用 `renderMermaidBlocks`，先于 Prism 把 `pre > code.language-mermaid` 替换为 `<div class="md-mermaid">` 并渲染 SVG。
+- `frontend/src/mermaid.ts`: Mermaid 渲染助手。封装 `mermaid.initialize`、`mermaid.render`、主题映射（light/sepia → default，dark → dark）和按块错误处理。源码保存在 `data-mermaid-source` 属性，主题切换时据此重渲染。
+- `frontend/src/mermaid-shim.d.ts`: Mermaid 11 自带类型依赖 TS 5+ 语法，项目通过 `tsconfig.json` 的 `paths` 指向本地 shim，跳过 `node_modules/mermaid` 类型加载，避免拉入 `@types/d3-dispatch` 的语法错误。
 - `frontend/src/style.css`: Tailwind 入口。
 - `frontend/src/App.css`: 渲染内容细节样式。
 - `wails.json`: 前端构建和前端文件服务配置。

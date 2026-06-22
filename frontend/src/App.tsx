@@ -31,6 +31,7 @@ import "prismjs/plugins/line-numbers/prism-line-numbers";
 import "prismjs/plugins/line-numbers/prism-line-numbers.css";
 import "./App.css";
 import FrontmatterTable from "./FrontmatterTable";
+import { renderMermaidBlocks, reinitForTheme } from "./mermaid";
 
 type PreviewPayload = {
 	filePath: string;
@@ -370,8 +371,21 @@ function App() {
 			return;
 		}
 
+		reinitForTheme(theme);
+		void renderMermaidBlocks(root, theme);
+	}, [contentHtml, theme]);
+
+	useEffect(() => {
+		const root = previewRef.current;
+		if (!root) {
+			return;
+		}
+
 		const blocks = Array.from(root.querySelectorAll("pre > code")).map((node) => node as HTMLElement);
 		blocks.forEach((codeBlock) => {
+			if (codeBlock.classList.contains("language-mermaid")) {
+				return;
+			}
 			const pre = codeBlock.parentElement;
 			if (!pre) {
 				return;

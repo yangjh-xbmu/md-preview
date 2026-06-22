@@ -16,6 +16,7 @@ capabilities:
 ## 功能特性
 
 - **Markdown 渲染**：goldmark + GFM（表格、任务列表、删除线等），经 bluemonday 安全过滤
+- **Mermaid 图表**：支持 ` ```mermaid ` 代码块渲染为 SVG 流程图、时序图、类图、状态图、甘特图、饼图等，跟随主题切换调色板，导出 HTML 同样可渲染
 - **脚注渲染**：支持 `[^note]` 与 `[^note]: ...` 形式的 Markdown 脚注
 - **Wiki 链接**：支持 `[[页面名]]`、`[[文件.pdf]]` 和 `[[页面|显示文本]]` 语法的双向链接
 - **Frontmatter 渲染**：自动解析 YAML frontmatter，以 GitHub 风格属性表展示，支持嵌套对象、数组标签、链接识别，跟随主题适配
@@ -63,6 +64,34 @@ Wiki 链接是 Obsidian 等笔记工具常用的双向链接语法。md-preview 
 ```markdown
 这是一个普通 wiki 链接 [[Wiki-Demo]]，带别名的链接 [[Wiki-Demo|点击跳转演示页]]。
 ```
+
+## Mermaid 图表示例
+
+md-preview 支持 Mermaid 图表语法，把 ` ```mermaid ` 代码块直接渲染为 SVG 图表，常见类型包括 flowchart、sequence、class、state、gantt、pie 等。图表会跟随当前主题切换调色板，导出 HTML 时也会通过 CDN 脚本渲染。
+
+下面是实际渲染案例：
+
+```mermaid
+flowchart LR
+    A[打开 Markdown] --> B{是否含 mermaid}
+    B -- 是 --> C[渲染 SVG 图表]
+    B -- 否 --> D[常规代码高亮]
+    C --> E[显示预览]
+    D --> E
+```
+
+对应的 Markdown 源码写法如下：
+
+````markdown
+```mermaid
+flowchart LR
+    A[打开 Markdown] --> B{是否含 mermaid}
+    B -- 是 --> C[渲染 SVG 图表]
+    B -- 否 --> D[常规代码高亮]
+    C --> E[显示预览]
+    D --> E
+```
+````
 
 ## 键盘快捷键
 
