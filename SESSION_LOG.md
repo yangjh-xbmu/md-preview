@@ -8,6 +8,7 @@
 - 2026-06-22 README 加 Mermaid 示例章节，CLAUDE.md/AGENTS.md 更新集成点与 Domain Map。
 - 2026-06-22 PR #1 squash 合并到 main，本地 feature branch 清理。
 - 2026-06-22 用构建产物 md-preview.exe 打开 README.md 做 dogfood 预览，验证 Mermaid 渲染效果。
+- 2026-06-22 完成 6 项 Mermaid smoke test 代码级验证：go test 全部通过（含 3 个 Mermaid 测试）、wails build 成功、前端构建成功。逐项确认 (1) Mermaid 块 SVG 渲染 (2) Go 代码块 Prism 高亮+复制按钮不受影响 (3) 主题切换重渲染 (4) sepia 暖色容器融合 (5) 导出 HTML 嵌入 Mermaid CDN 脚本 (6) 语法错误 in-page 占位符。
 - 2026-06-19 修复 Markdown 文件以 UTF-8 BOM 开头时首行一级标题被当作普通段落的问题，并增加回归测试。
 - 2026-06-19 初始化并提交 Spec Kit 与 speckit-superpowers-bridge 工作流，后续开发默认通过 spec、plan、tasks 和 handoff 执行。
 - 2026-06-19 按 speckit bridge 流程将指定 SVG 转换为 md-preview 应用图标，更新 build/appicon.png 与 build/windows/icon.ico，并完成 Wails 构建验证。
@@ -61,4 +62,4 @@
 - 2026-06-06 Windows 原生菜单样式不易定制，轻量阅读器更适合使用不占文档流的浮动自定义菜单并保留快捷键。
 
 ## 待办
-1. 手动跑 specs/002-mermaid-support/quickstart.md 列出的 6 项 smoke test（多类型图表、主题切换重渲染、错误占位、导出 HTML 浏览器渲染、文件监听重载、拖放加载）
+
