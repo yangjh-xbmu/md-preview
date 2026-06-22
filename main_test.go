@@ -342,8 +342,8 @@ func TestExportHTMLWritesFileWithThemeAndSanitization(t *testing.T) {
 	if !strings.Contains(exported, "<h1") {
 		t.Fatalf("expected rendered heading in export")
 	}
-	if strings.Contains(strings.ToLower(exported), "<script") {
-		t.Fatalf("expected script to be sanitized")
+	if strings.Contains(strings.ToLower(exported), "<script>console.log") {
+		t.Fatalf("expected user-provided script to be sanitized")
 	}
 
 	expected, err := filepath.Abs(filepath.Join(dir, "note-preview.html"))
@@ -390,5 +390,119 @@ func TestConfigCanMarshalForFrontend(t *testing.T) {
 	}
 	if len(raw) == 0 {
 		t.Fatalf("expected serialized payload")
+	}
+}
+
+func TestLoadMarkdownPreservesMermaidCodeBlock(t *testing.T) {
+	dir := t.TempDir()
+	md := filepath.Join(dir, "doc.md")
+	source := strings.Join([]string{
+		"# Diagram",
+		"",
+		"```mermaid",
+		"flowchart LR",
+		"  A --> B",
+		"```",
+	}, "\n")
+	if err := os.WriteFile(md, []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := app.LoadMarkdown()
+	if payload.Error != "" {
+		t.Fatalf("expected success, got error %q", payload.Error)
+	}
+	if !strings.Contains(payload.HTML, `class="language-mermaid"`) {
+		t.Fatalf("expected mermaid code block to survive sanitization, got: %s", payload.HTML)
+	}
+	if !strings.Contains(payload.HTML, "flowchart LR") {
+		t.Fatalf("expected mermaid source to survive sanitization, got: %s", payload.HTML)
+	}
+}
+
+func TestExportHTMLIncludesMermaidRuntime(t *testing.T) {
+	dir := t.TempDir()
+	md := filepath.Join(dir, "note.md")
+	content := strings.Join([]string{
+		"# Note",
+		"",
+		"```mermaid",
+		"flowchart LR",
+		"  A --> B",
+		"```",
+		"",
+		"<script>alert(1)</script>",
+	}, "\n")
+	if err := os.WriteFile(md, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outputPath, err := app.ExportHTML("", "github-light")
+	if err != nil {
+		t.Fatalf("expected export success: %v", err)
+	}
+	defer os.Remove(outputPath)
+
+	raw, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("expected exported file: %v", err)
+	}
+
+	exported := string(raw)
+	if !strings.Contains(exported, "cdn.jsdelivr.net/npm/mermaid@") {
+		t.Fatalf("expected exported HTML to include mermaid CDN script")
+	}
+	if !strings.Contains(exported, "mermaid.render(") {
+		t.Fatalf("expected exported HTML to include mermaid initializer")
+	}
+	if !strings.Contains(exported, "theme: 'default'") {
+		t.Fatalf("expected exported HTML to initialize mermaid with default theme for light export, got: %s", exported)
+	}
+	if !strings.Contains(exported, `class="language-mermaid"`) {
+		t.Fatalf("expected exported HTML to retain mermaid code block")
+	}
+	if strings.Contains(strings.ToLower(exported), "<script>alert(1)</script>") {
+		t.Fatalf("expected inline script tag to be sanitized in export")
+	}
+}
+
+func TestExportHTMLMermaidThemeMatchesPreviewTheme(t *testing.T) {
+	dir := t.TempDir()
+	md := filepath.Join(dir, "note.md")
+	if err := os.WriteFile(md, []byte("```mermaid\nflowchart LR\n  A --> B\n```\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outputPath, err := app.ExportHTML("", "github-dark")
+	if err != nil {
+		t.Fatalf("expected export success: %v", err)
+	}
+	defer os.Remove(outputPath)
+
+	raw, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("expected exported file: %v", err)
+	}
+
+	exported := string(raw)
+	if !strings.Contains(exported, "theme: 'dark'") {
+		t.Fatalf("expected exported HTML to initialize mermaid with dark theme for dark export")
+	}
+	if !strings.Contains(exported, `class="markdown-body theme-github-dark"`) {
+		t.Fatalf("expected exported HTML to retain dark preview theme class")
 	}
 }

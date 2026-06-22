@@ -282,7 +282,81 @@ const exportHTMLTemplate = `<!doctype html>
     box-shadow: inset 3px 0 0 #8a5f1f;
     color: #3f2f18;
   }
+
+  .md-mermaid {
+    margin: 1rem 0;
+    text-align: center;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+  }
+
+  .md-mermaid svg {
+    max-width: 100%%;
+    height: auto;
+  }
+
+  .md-mermaid-error {
+    border: 1px dashed #d0d7de;
+    border-radius: 0.375rem;
+    background: #f6f8fa;
+    color: #cf222e;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.85rem;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    white-space: pre-wrap;
+  }
+
+  .markdown-body.theme-github-dark .md-mermaid-error {
+    border-color: #30363d;
+    background: #161b22;
+    color: #ff7b72;
+  }
+
+  .markdown-body.theme-github-sepia .md-mermaid-error {
+    border-color: rgba(160, 132, 90, 0.45);
+    background: #efe0c8;
+    color: #9b2c2c;
+  }
+
+  .markdown-body.theme-github-sepia .md-mermaid {
+    background: rgba(234, 213, 167, 0.35);
+    border-radius: 0.5rem;
+  }
 </style>
+<script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    if (typeof window.mermaid === 'undefined') return;
+    var blocks = document.querySelectorAll('pre > code.language-mermaid');
+    if (!blocks.length) return;
+    window.mermaid.initialize({
+      startOnLoad: false,
+      theme: '%s',
+      securityLevel: 'strict'
+    });
+    blocks.forEach(function (codeBlock, index) {
+      var pre = codeBlock.parentElement;
+      if (!pre) return;
+      var source = codeBlock.textContent || '';
+      var container = document.createElement('div');
+      container.className = 'md-mermaid';
+      container.setAttribute('role', 'img');
+      container.textContent = source;
+      var id = 'md-mermaid-svg-' + index + '-' + Date.now();
+      window.mermaid.render(id, source).then(function (result) {
+        container.innerHTML = result.svg;
+        pre.replaceWith(container);
+      }).catch(function (err) {
+        container.className = 'md-mermaid md-mermaid-error';
+        container.setAttribute('role', 'alert');
+        var msg = (err && (err.message || err.str)) || String(err);
+        container.textContent = 'Mermaid render failed: ' + msg;
+        pre.replaceWith(container);
+      });
+    });
+  });
+</script>
 </head>
 <body>
 <article class="markdown-body theme-%s">%s</article>
@@ -562,8 +636,12 @@ func (a *App) ExportHTML(path string, theme string) (string, error) {
 
 	body := payload.HTML
 	themeClass := sanitizeTheme(theme)
+	mermaidTheme := "default"
+	if themeClass == "github-dark" {
+		mermaidTheme = "dark"
+	}
 	title := html.EscapeString(filepath.Base(a.currentFilePath()))
-	output := fmt.Sprintf(exportHTMLTemplate, title, themeClass, body)
+	output := fmt.Sprintf(exportHTMLTemplate, title, mermaidTheme, themeClass, body)
 
 	if err := os.WriteFile(target, []byte(output), 0o644); err != nil {
 		return "", fmt.Errorf("failed to write export file: %w", err)
