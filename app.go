@@ -148,6 +148,29 @@ const exportHTMLTemplate = `<!doctype html>
     margin-bottom: 1rem;
   }
 
+  .markdown-body pre[class*="language-"],
+  .markdown-body code[class*="language-"],
+  .markdown-body pre[class*="language-"] *,
+  .markdown-body code[class*="language-"] * {
+    text-shadow: none;
+  }
+
+  .markdown-body pre[class*="language-"] {
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    box-shadow: none;
+  }
+
+  .markdown-body .line-numbers .line-numbers-rows {
+    border-right-color: #d0d7de;
+    letter-spacing: 0;
+  }
+
+  .markdown-body .line-numbers-rows > span:before {
+    color: #6e7781;
+    text-shadow: none;
+  }
+
   .markdown-body hr {
     border: 0;
     border-top: 1px solid #d8dee4;
@@ -175,6 +198,19 @@ const exportHTMLTemplate = `<!doctype html>
     background: #161b22;
   }
 
+  .markdown-body.theme-github-dark pre[class*="language-"] {
+    background: #161b22;
+    border-color: #30363d;
+  }
+
+  .markdown-body.theme-github-dark .line-numbers .line-numbers-rows {
+    border-right-color: #30363d;
+  }
+
+  .markdown-body.theme-github-dark .line-numbers-rows > span:before {
+    color: #8b949e;
+  }
+
   .markdown-body.theme-github-sepia,
   .markdown-body.theme-github-sepia a,
   .markdown-body.theme-github-sepia code,
@@ -194,6 +230,19 @@ const exportHTMLTemplate = `<!doctype html>
   .markdown-body.theme-github-sepia pre {
     border: 1px solid rgba(132, 102, 56, 0.35);
     background: #ead5a7;
+  }
+
+  .markdown-body.theme-github-sepia pre[class*="language-"] {
+    background: #ead5a7;
+    border-color: rgba(132, 102, 56, 0.35);
+  }
+
+  .markdown-body.theme-github-sepia .line-numbers .line-numbers-rows {
+    border-right-color: rgba(132, 102, 56, 0.35);
+  }
+
+  .markdown-body.theme-github-sepia .line-numbers-rows > span:before {
+    color: #7a6544;
   }
 
   .markdown-body table {

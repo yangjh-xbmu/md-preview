@@ -286,6 +286,97 @@ func TestExportHTMLIncludesFootnoteStyles(t *testing.T) {
 	}
 }
 
+func TestExportHTMLDisablesPrismCodeBlockTextShadow(t *testing.T) {
+	dir := t.TempDir()
+	md := filepath.Join(dir, "note.md")
+	content := strings.Join([]string{
+		"```yaml",
+		"proxies:",
+		"  - name: usa",
+		"```",
+	}, "\n")
+	if err := os.WriteFile(md, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outputPath, err := app.ExportHTML("", "github-light")
+	if err != nil {
+		t.Fatalf("expected export success: %v", err)
+	}
+	defer os.Remove(outputPath)
+
+	raw, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("expected exported file: %v", err)
+	}
+
+	exported := string(raw)
+	requiredRules := []string{
+		`.markdown-body pre[class*="language-"],`,
+		`.markdown-body code[class*="language-"],`,
+		`.markdown-body pre[class*="language-"] *,`,
+		`.markdown-body code[class*="language-"] *`,
+		`text-shadow: none;`,
+		`.markdown-body .line-numbers-rows > span:before`,
+	}
+	for _, rule := range requiredRules {
+		if !strings.Contains(exported, rule) {
+			t.Fatalf("expected exported HTML to include no-shadow rule %q, got: %s", rule, exported)
+		}
+	}
+}
+
+func TestFrontendCSSDisablesPrismCodeBlockTextShadow(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("frontend", "src", "App.css"))
+	if err != nil {
+		t.Fatalf("expected App.css to be readable: %v", err)
+	}
+	css := string(raw)
+	requiredRules := []string{
+		`.markdown-body pre[class*="language-"],`,
+		`.markdown-body code[class*="language-"],`,
+		`.markdown-body pre[class*="language-"] *,`,
+		`.markdown-body code[class*="language-"] *`,
+		`text-shadow: none;`,
+		`.markdown-body .line-numbers-rows > span:before`,
+		`.markdown-body.theme-github-dark .line-numbers-rows > span:before`,
+		`.markdown-body.theme-github-sepia .line-numbers-rows > span:before`,
+	}
+	for _, rule := range requiredRules {
+		if !strings.Contains(css, rule) {
+			t.Fatalf("expected frontend CSS to include no-shadow rule %q", rule)
+		}
+	}
+}
+
+func TestFrontendCSSSeparatesCodeCopyControlFromContent(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("frontend", "src", "App.css"))
+	if err != nil {
+		t.Fatalf("expected App.css to be readable: %v", err)
+	}
+	css := string(raw)
+	requiredRules := []string{
+		`.markdown-body pre.md-code-block {`,
+		`padding-top: 2.75rem;`,
+		`padding-right: 7.25rem;`,
+		`.markdown-body pre.md-code-block::before`,
+		`height: 2.15rem;`,
+		`border-bottom: 1px solid rgba(208, 215, 222, 0.8);`,
+		`.md-preview-root.theme-shell-github-dark .markdown-body pre.md-code-block::before`,
+		`.md-preview-root.theme-shell-github-sepia .markdown-body pre.md-code-block::before`,
+	}
+	for _, rule := range requiredRules {
+		if !strings.Contains(css, rule) {
+			t.Fatalf("expected frontend CSS to separate copy control with rule %q", rule)
+		}
+	}
+}
+
 func TestCurrentVersion(t *testing.T) {
 	dir := t.TempDir()
 	md := filepath.Join(dir, "doc.md")
