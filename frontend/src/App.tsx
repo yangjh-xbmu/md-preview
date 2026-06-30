@@ -9,7 +9,20 @@ import {
 	WindowIsFullscreen,
 	WindowUnfullscreen,
 } from "../wailsjs/runtime";
-import { ExportHTMLWithDialog, LoadMarkdown, OpenMarkdownFile, PrintPreview, ResolveWikiLink, SetFile, SetTheme } from "../wailsjs/go/main/App";
+import {
+	CheckForUpdates,
+	ExportHTMLWithDialog,
+	GetUpdateSettings,
+	GetUpdateStatus,
+	InstallStagedUpdate,
+	LoadMarkdown,
+	OpenMarkdownFile,
+	PrintPreview,
+	ResolveWikiLink,
+	SetAutoUpdateEnabled,
+	SetFile,
+	SetTheme,
+} from "../wailsjs/go/main/App";
 import "github-markdown-css/github-markdown.css";
 import Prism from "prismjs";
 import "prismjs/components/prism-markup";
@@ -52,6 +65,16 @@ type ThemeName = "github-light" | "github-dark" | "github-sepia";
 
 type CodeBlockLanguage = string;
 
+type UpdateStatus = {
+	state: string;
+	currentVersion: string;
+	latestVersion: string;
+	message: string;
+	downloadedPath: string;
+	releaseURL: string;
+	checkedAt: string;
+};
+
 const fallbackMarkup = "<p>No Markdown file is loaded. Open a file or pass one on the command line.</p>";
 
 const statusUnknown = "Loading preview...";
@@ -62,6 +85,16 @@ const themeLabels: Record<ThemeName, string> = {
 	"github-light": "Light",
 	"github-dark": "Dark",
 	"github-sepia": "Sepia",
+};
+
+const initialUpdateStatus: UpdateStatus = {
+	state: "idle",
+	currentVersion: "",
+	latestVersion: "",
+	message: "Automatic updates are enabled.",
+	downloadedPath: "",
+	releaseURL: "",
+	checkedAt: "",
 };
 
 function slugifyHeading(text: string, fallbackIndex: number): string {
@@ -161,6 +194,8 @@ function App() {
 	const [tocVisible, setTocVisible] = useState(true);
 	const [fullscreen, setFullscreen] = useState(false);
 	const [actionMessage, setActionMessage] = useState("");
+	const [autoUpdateEnabled, setAutoUpdateEnabledState] = useState(true);
+	const [updateStatus, setUpdateStatus] = useState<UpdateStatus>(initialUpdateStatus);
 	const [menuOpen, setMenuOpen] = useState(false);
 	const navHistory = useRef<string[]>([]);
 	const navIndex = useRef(-1);
@@ -239,6 +274,11 @@ function App() {
 				setActionMessage(message);
 			}
 		};
+		const handleUpdateStatus = (nextStatus: UpdateStatus) => {
+			if (mounted) {
+				setUpdateStatus(nextStatus);
+			}
+		};
 		const syncFullscreenState = async () => {
 			try {
 				const isFullscreen = await WindowIsFullscreen();
@@ -253,16 +293,35 @@ function App() {
 		};
 
 		loadInitial();
+		void (async () => {
+			try {
+				const [settings, status] = await Promise.all([GetUpdateSettings(), GetUpdateStatus()]);
+				if (mounted) {
+					setAutoUpdateEnabledState(settings.autoUpdateEnabled);
+					setUpdateStatus(status);
+				}
+			} catch {
+				if (mounted) {
+					setUpdateStatus({
+						...initialUpdateStatus,
+						state: "failed",
+						message: "Failed to load update settings.",
+					});
+				}
+			}
+		})();
 		void syncFullscreenState();
 		EventsOn("markdown-updated", handleUpdate);
 		EventsOn("theme-changed", handleThemeChange);
 		EventsOn("status-message", handleStatusMessage);
+		EventsOn("update-status-changed", handleUpdateStatus);
 
 		return () => {
 			mounted = false;
 			EventsOff("markdown-updated");
 			EventsOff("theme-changed");
 			EventsOff("status-message");
+			EventsOff("update-status-changed");
 		};
 	}, []);
 
@@ -594,6 +653,38 @@ function App() {
 		setTheme(nextTheme);
 	};
 
+	const toggleAutoUpdate = async () => {
+		try {
+			const next = await SetAutoUpdateEnabled(!autoUpdateEnabled);
+			setAutoUpdateEnabledState(next.autoUpdateEnabled);
+			const status = await GetUpdateStatus();
+			setUpdateStatus(status);
+			setActionMessage(status.message);
+		} catch {
+			setActionMessage("Failed to update automatic update setting.");
+		}
+	};
+
+	const checkForUpdates = async () => {
+		try {
+			const status = await CheckForUpdates(true);
+			setUpdateStatus(status);
+			setActionMessage(status.message);
+		} catch {
+			setActionMessage("Failed to check for updates.");
+		}
+	};
+
+	const installStagedUpdate = async () => {
+		try {
+			const status = await InstallStagedUpdate();
+			setUpdateStatus(status);
+			setActionMessage(status.message);
+		} catch {
+			setActionMessage("Failed to install staged update.");
+		}
+	};
+
 	const showToc = toc.length > 0 && tocVisible;
 
 	return (
@@ -661,6 +752,35 @@ function App() {
 										<span>{themeLabels[item]}</span>
 									</button>
 								))}
+							</div>
+						</div>
+
+						<div className="md-menu-section">
+							<p className="md-menu-label">Updates</p>
+							<button
+								type="button"
+								role="menuitemcheckbox"
+								aria-checked={autoUpdateEnabled}
+								className="md-menu-item"
+								onClick={toggleAutoUpdate}
+							>
+								<span>Auto Updates</span>
+								<span className={`md-update-pill ${autoUpdateEnabled ? "is-on" : "is-off"}`}>
+									{autoUpdateEnabled ? "On" : "Off"}
+								</span>
+							</button>
+							<button type="button" role="menuitem" className="md-menu-item" onClick={checkForUpdates}>
+								<span>Check Updates</span>
+								<span className="md-update-pill">{updateStatus.state === "checking" ? "..." : "Now"}</span>
+							</button>
+							{updateStatus.state === "ready" ? (
+								<button type="button" role="menuitem" className="md-menu-item" onClick={installStagedUpdate}>
+									<span>Restart to Install</span>
+									<span className="md-update-pill is-on">Ready</span>
+								</button>
+							) : null}
+							<div className={`md-update-status is-${updateStatus.state}`}>
+								{updateStatus.message || "Automatic updates are enabled."}
 							</div>
 						</div>
 					</div>

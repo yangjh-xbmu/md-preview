@@ -31,5 +31,5 @@ The CLI validates one `.md` or `.markdown` file, starts the Wails desktop app, r
 
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
-shell commands, and other important information, read `specs/003-codeblock-rendering-regression/plan.md`.
+shell commands, and other important information, read `specs/004-auto-update/plan.md`.
 <!-- SPECKIT END -->

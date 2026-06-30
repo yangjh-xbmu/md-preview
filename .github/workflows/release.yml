@@ -51,7 +51,7 @@ jobs:
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Build
-        run: wails build -platform "${{ matrix.target }}/${{ matrix.arch }}" -o md-preview -clean
+        run: wails build -platform "${{ matrix.target }}/${{ matrix.arch }}" -o md-preview -clean -ldflags "-X main.appVersion=${GITHUB_REF_NAME#v}"
         env:
           CGO_ENABLED: 1
 
@@ -121,4 +121,4 @@ jobs:
             - Clean print output (no UI chrome)
             - Keyboard shortcuts (Ctrl+O Open, Ctrl+S Export, Ctrl+P Print)
           files: artifacts/*
-          draft: true
+          draft: false

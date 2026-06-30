@@ -126,6 +126,47 @@
   padding: 0.18rem 0.3rem;
 }
 
+.md-update-pill {
+  border: 1px solid rgba(100, 116, 139, 0.28);
+  border-radius: 999px;
+  color: #64748b;
+  font-size: 0.68rem;
+  line-height: 1;
+  padding: 0.18rem 0.42rem;
+}
+
+.md-update-pill.is-on {
+  border-color: rgba(22, 163, 74, 0.36);
+  color: #166534;
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.md-update-pill.is-off {
+  border-color: rgba(100, 116, 139, 0.28);
+  color: #64748b;
+  background: rgba(100, 116, 139, 0.08);
+}
+
+.md-update-status {
+  border-radius: 0.375rem;
+  color: #475569;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  margin: 0.25rem 0.45rem 0;
+  padding: 0.4rem 0.48rem;
+  background: rgba(100, 116, 139, 0.08);
+}
+
+.md-update-status.is-failed {
+  color: #991b1b;
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.md-update-status.is-ready {
+  color: #166534;
+  background: rgba(22, 163, 74, 0.08);
+}
+
 .md-theme-grid {
   display: grid;
   gap: 0.25rem;
@@ -236,8 +277,25 @@
 }
 
 .md-preview-root.theme-shell-github-dark .md-menu-label,
-.md-preview-root.theme-shell-github-dark .md-menu-item kbd {
+.md-preview-root.theme-shell-github-dark .md-menu-item kbd,
+.md-preview-root.theme-shell-github-dark .md-update-pill {
   color: #8b949e;
+}
+
+.md-preview-root.theme-shell-github-dark .md-update-status {
+  color: #adbac7;
+  background: rgba(139, 148, 158, 0.1);
+}
+
+.md-preview-root.theme-shell-github-dark .md-update-pill.is-on,
+.md-preview-root.theme-shell-github-dark .md-update-status.is-ready {
+  color: #7ee787;
+  background: rgba(46, 160, 67, 0.14);
+}
+
+.md-preview-root.theme-shell-github-dark .md-update-status.is-failed {
+  color: #ff7b72;
+  background: rgba(248, 81, 73, 0.12);
 }
 
 .md-preview-root.theme-shell-github-dark .md-menu-item:hover,
@@ -270,8 +328,25 @@
 }
 
 .md-preview-root.theme-shell-github-sepia .md-menu-label,
-.md-preview-root.theme-shell-github-sepia .md-menu-item kbd {
+.md-preview-root.theme-shell-github-sepia .md-menu-item kbd,
+.md-preview-root.theme-shell-github-sepia .md-update-pill {
   color: #7a6544;
+}
+
+.md-preview-root.theme-shell-github-sepia .md-update-status {
+  color: #6b5434;
+  background: rgba(138, 95, 31, 0.1);
+}
+
+.md-preview-root.theme-shell-github-sepia .md-update-pill.is-on,
+.md-preview-root.theme-shell-github-sepia .md-update-status.is-ready {
+  color: #516b23;
+  background: rgba(81, 107, 35, 0.12);
+}
+
+.md-preview-root.theme-shell-github-sepia .md-update-status.is-failed {
+  color: #9b2c2c;
+  background: rgba(155, 44, 44, 0.1);
 }
 
 .md-preview-root.theme-shell-github-sepia .md-menu-item:hover,

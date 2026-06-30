@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -78,6 +79,17 @@ type App struct {
 	fileMu       sync.RWMutex
 	theme        string
 	themeMu      sync.RWMutex
+
+	updateMu             sync.Mutex
+	updateStatus         UpdateStatus
+	updateSettingsPath   string
+	updateStagingDir     string
+	updateHTTPClient     *http.Client
+	releaseAPIURL        string
+	version              string
+	osName               string
+	archName             string
+	failedUpdateVersions map[string]bool
 }
 
 const exportHTMLTemplate = `<!doctype html>
@@ -415,12 +427,14 @@ const exportHTMLTemplate = `<!doctype html>
 // NewApp creates a new App application struct.
 func NewApp(cfg config) (*App, error) {
 	if cfg.File == "" {
-		return &App{
+		app := &App{
 			cfg:    cfg,
 			md:     newRenderer(),
 			policy: markdownPolicy(),
 			theme:  "github-light",
-		}, nil
+		}
+		app.initUpdateDefaults()
+		return app, nil
 	}
 
 	absPath, err := filepath.Abs(cfg.File)
@@ -429,12 +443,14 @@ func NewApp(cfg config) (*App, error) {
 	}
 	cfg.File = absPath
 
-	return &App{
+	app := &App{
 		cfg:    cfg,
 		md:     newRenderer(),
 		policy: markdownPolicy(),
 		theme:  "github-light",
-	}, nil
+	}
+	app.initUpdateDefaults()
+	return app, nil
 }
 
 // startup is called when the app starts. The context is saved
@@ -442,6 +458,7 @@ func NewApp(cfg config) (*App, error) {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	go a.watchForChanges()
+	a.startUpdateCheckIfEnabled()
 }
 
 // LoadMarkdown loads the target file and returns rendered HTML.
