@@ -29,3 +29,15 @@
 {"timestamp":"2026-06-30T03:07:17Z","action":"guard","status":"allow","feature_directory":"specs/004-auto-update","decision":"allow","reason":"","actor":"codex","checked_action":"superpowers:executing-plans"}
 {"timestamp":"2026-06-30T03:17:55Z","action":"handoff","status":"complete","feature_directory":"specs/004-auto-update","decision":"updated","reason":"","actor":"codex","prior_actor":"codex","snapshot_id":"20260630T031754262Z-complete"}
 {"event":"artifact_drift_detected","timestamp":"2026-06-30T03:17:55Z","actor":"codex","feature_directory":"specs/004-auto-update","drifted_artifacts":[{"path":"tasks.md","old_sha256":"22f354817fa3e8ce7bca3342d83d87f0ae67dfab0cbfdf78e0058001a36eb384","new_sha256":"989cfa215d76d921793bcf64f424f6c98121e9967de80508f0ce71b876f76c0d"}]}
+{"timestamp":"2026-07-01T03:58:34.1221835Z","action":"guard","status":"allow","feature_directory":"specs/004-auto-update","decision":"allow","reason":"","actor":"claude","checked_action":"speckit.plan"}
+
+{"timestamp":"2026-07-01T04:00:18.5963552Z","action":"guard","status":"allow","feature_directory":"specs/004-auto-update","decision":"allow","reason":"","actor":"claude","checked_action":"speckit.tasks"}
+
+{"timestamp":"2026-07-01T04:01:09.3273296Z","action":"handoff","status":"ready","feature_directory":"specs/004-auto-update","decision":"updated","reason":"actor change codex 鈫?claude","actor":"claude","prior_actor":"codex","snapshot_id":"20260701T0401093089655Z-ready"}
+
+{"timestamp":"2026-07-01T04:01:24.2152317Z","action":"handoff","status":"ready","feature_directory":"specs/005-wiki-link-navigation","decision":"updated","reason":"","actor":"claude","prior_actor":"claude","snapshot_id":"20260701T0401241975675Z-ready"}
+
+{"timestamp":"2026-07-01T04:01:35.2693079Z","action":"guard","status":"allow","feature_directory":"specs/005-wiki-link-navigation","decision":"allow","reason":"","actor":"claude","checked_action":"speckit.implement"}
+
+{"timestamp":"2026-07-01T04:05:28.4598267Z","action":"handoff","status":"complete","feature_directory":"specs/005-wiki-link-navigation","decision":"updated","reason":"","actor":"claude","prior_actor":"claude","snapshot_id":"20260701T0405283549147Z-complete"}
+

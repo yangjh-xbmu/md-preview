@@ -217,12 +217,20 @@ func TestLoadMarkdownRendersWikiLinks(t *testing.T) {
 func TestResolveWikiLink(t *testing.T) {
 	dir := t.TempDir()
 	md := filepath.Join(dir, "doc.md")
-	target := filepath.Join(dir, "Foo Bar.md")
 	if err := os.WriteFile(md, []byte("# doc"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(target, []byte("# Foo Bar"), 0o644); err != nil {
-		t.Fatal(err)
+
+	files := []string{
+		"Foo Bar.md",
+		"Git基本概念与常用命令.md",
+		"README.md",
+		"Note.md",
+	}
+	for _, name := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("# "+name), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	app, err := NewApp(config{File: md, Watch: false})
@@ -230,12 +238,27 @@ func TestResolveWikiLink(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resolved := app.ResolveWikiLink("Foo%20Bar.html")
-	if resolved == "" {
-		t.Fatal("expected resolved path for Foo%20Bar.html")
+	cases := []struct {
+		href       string
+		wantSuffix string
+	}{
+		{"Foo%20Bar.html", "Foo Bar.md"},
+		{"Foo Bar.html", "Foo Bar.md"},
+		{"Foo%20Bar.md", "Foo Bar.md"},
+		{"Git%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E4%B8%8E%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4.html", "Git基本概念与常用命令.md"},
+		{"README", "README.md"},
+		{"README.md", "README.md"},
+		{"Note.html", "Note.md"},
 	}
-	if !strings.HasSuffix(resolved, "Foo Bar.md") {
-		t.Fatalf("expected path ending with 'Foo Bar.md', got: %s", resolved)
+
+	for _, c := range cases {
+		resolved := app.ResolveWikiLink(c.href)
+		if resolved == "" {
+			t.Fatalf("expected resolved path for href %q", c.href)
+		}
+		if !strings.HasSuffix(resolved, c.wantSuffix) {
+			t.Fatalf("href %q: expected path ending with %q, got: %s", c.href, c.wantSuffix, resolved)
+		}
 	}
 
 	// non-existent target returns empty
@@ -243,9 +266,19 @@ func TestResolveWikiLink(t *testing.T) {
 		t.Fatal("expected empty string for missing wiki link target")
 	}
 
-	// non-.html href returns empty (not a wiki link)
+	// non-markdown extension returns empty
+	if app.ResolveWikiLink("invalid.txt") != "" {
+		t.Fatal("expected empty string for non-markdown extension")
+	}
+
+	// external URL returns empty
 	if app.ResolveWikiLink("https://example.com") != "" {
 		t.Fatal("expected empty string for external URL")
+	}
+
+	// empty href returns empty
+	if app.ResolveWikiLink("") != "" {
+		t.Fatal("expected empty string for empty href")
 	}
 }
 

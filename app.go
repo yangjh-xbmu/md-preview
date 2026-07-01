@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"html"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -508,15 +509,20 @@ func (a *App) ResolveWikiLink(href string) string {
 		return ""
 	}
 
-	decoded := strings.ReplaceAll(href, "%20", " ")
-	decoded = strings.ReplaceAll(decoded, "%5B", "[")
-	decoded = strings.ReplaceAll(decoded, "%5D", "]")
+	decoded, err := url.PathUnescape(href)
+	if err != nil {
+		decoded = href
+	}
 
-	if strings.HasSuffix(decoded, ".html") || strings.HasSuffix(decoded, ".htm") {
+	ext := strings.ToLower(filepath.Ext(decoded))
+	switch ext {
+	case ".html", ".htm":
 		decoded = decoded[:strings.LastIndex(decoded, ".")] + ".md"
-	} else if filepath.Ext(decoded) == "" {
-		decoded += ".md"
-	} else {
+	case "", ".md", ".markdown":
+		if ext == "" {
+			decoded += ".md"
+		}
+	default:
 		return ""
 	}
 
