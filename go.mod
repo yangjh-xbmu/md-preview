@@ -4,13 +4,14 @@ go 1.23
 
 require (
 	github.com/microcosm-cc/bluemonday v1.0.27
-	github.com/wailsapp/wails/v2 v2.11.0
+	github.com/wailsapp/wails/v2 v2.12.0
 	github.com/yuin/goldmark v1.8.2
 	go.abhg.dev/goldmark/wikilink v0.6.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
+	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect

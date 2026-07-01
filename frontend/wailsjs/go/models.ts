@@ -1,5 +1,5 @@
 export namespace main {
-
+	
 	export class PreviewPayload {
 	    filePath: string;
 	    html: string;
@@ -7,11 +7,11 @@ export namespace main {
 	    renderedAt: string;
 	    error?: string;
 	    frontmatter?: any;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new PreviewPayload(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.filePath = source["filePath"];
@@ -24,11 +24,11 @@ export namespace main {
 	}
 	export class UpdateSettings {
 	    autoUpdateEnabled: boolean;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UpdateSettings(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.autoUpdateEnabled = source["autoUpdateEnabled"];
@@ -42,11 +42,11 @@ export namespace main {
 	    downloadedPath: string;
 	    releaseURL: string;
 	    checkedAt: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UpdateStatus(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.state = source["state"];
