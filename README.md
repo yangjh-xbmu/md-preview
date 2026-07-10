@@ -5,6 +5,7 @@ next_steps: []
 capabilities:
   - markdown-preview
   - gfm-rendering
+  - local-image-preview
   - desktop-app
 ---
 # md-preview
@@ -16,6 +17,7 @@ capabilities:
 ## 功能特性
 
 - **Markdown 渲染**：goldmark + GFM（表格、任务列表、删除线等），经 bluemonday 安全过滤
+- **本地图片**：支持相对路径引用 PNG、JPEG、GIF、WebP 和 SVG，通过当前文档的受控资源白名单加载
 - **Mermaid 图表**：支持 ` ```mermaid ` 代码块渲染为 SVG 流程图、时序图、类图、状态图、甘特图、饼图等，跟随主题切换调色板，导出 HTML 同样可渲染
 - **脚注渲染**：支持 `[^note]` 与 `[^note]: ...` 形式的 Markdown 脚注
 - **Wiki 链接**：支持 `[[页面名]]`、`[[文件.pdf]]` 和 `[[页面|显示文本]]` 语法的双向链接

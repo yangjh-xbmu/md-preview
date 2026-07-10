@@ -10,8 +10,9 @@
 
 ## 关键实现
 
-- `main.go`: CLI 参数解析与 Wails 启动。
-- `app.go`: `App` 结构体、`LoadMarkdown`、`CurrentVersion`、文件监听和事件发送（`markdown-updated`）。`exportHTMLTemplate` 内嵌 Mermaid CDN 与初始化脚本，导出 HTML 在浏览器打开时自动渲染 mermaid 代码块。
+- `main.go`: CLI 参数解析、Wails 启动，以及内嵌前端资源与本地图片 Handler 的装配。
+- `app.go`: `App` 结构体、`LoadMarkdown`、`CurrentVersion`、本地图片白名单、文件监听和事件发送（`markdown-updated`）。`exportHTMLTemplate` 内嵌 Mermaid CDN 与初始化脚本，导出 HTML 在浏览器打开时自动渲染 mermaid 代码块。
+- `local_assets.go`: 解析 Markdown 相对图片路径，生成不暴露磁盘路径的资源 ID，只向 Wails WebView 提供当前文档渲染时登记的图片文件。
 - `frontend/src/App.tsx`: GitHub 风格 Markdown 展示界面，订阅 `markdown-updated`。`contentHtml` 与 `theme` 联合 effect 调用 `renderMermaidBlocks`，先于 Prism 把 `pre > code.language-mermaid` 替换为 `<div class="md-mermaid">` 并渲染 SVG。
 - `frontend/src/mermaid.ts`: Mermaid 渲染助手。封装 `mermaid.initialize`、`mermaid.render`、主题映射（light/sepia → default，dark → dark）和按块错误处理。源码保存在 `data-mermaid-source` 属性，主题切换时据此重渲染。
 - `frontend/src/mermaid-shim.d.ts`: Mermaid 11 自带类型依赖 TS 5+ 语法，项目通过 `tsconfig.json` 的 `paths` 指向本地 shim，跳过 `node_modules/mermaid` 类型加载，避免拉入 `@types/d3-dispatch` 的语法错误。

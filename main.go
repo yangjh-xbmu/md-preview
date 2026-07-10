@@ -1,3 +1,6 @@
+// INPUT: CLI arguments, embedded frontend assets, Markdown file paths, Wails runtime.
+// OUTPUT: Validated desktop application startup with embedded and local preview assets.
+// POS: CLI entry point and Wails application bootstrap for md-preview.
 package main
 
 import (
@@ -130,7 +133,8 @@ func runDesktopApp(app *App) error {
 		Width:  1280,
 		Height: 840,
 		AssetServer: &assetserver.Options{
-			Assets: assets,
+			Assets:  assets,
+			Handler: newLocalAssetHandler(app),
 		},
 		BackgroundColour: &options.RGBA{R: 14, G: 17, B: 22, A: 1},
 		OnStartup:        app.startup,

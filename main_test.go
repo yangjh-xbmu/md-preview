@@ -1,11 +1,13 @@
-// INPUT: md-preview backend functions, temporary Markdown files, JSON payloads.
-// OUTPUT: Unit coverage for argument parsing, rendering, sanitization, export and state helpers.
+// INPUT: md-preview backend functions, temporary Markdown and image files, HTTP requests, JSON payloads.
+// OUTPUT: Unit coverage for argument parsing, rendering, local assets, sanitization, export and state helpers.
 // POS: Regression test suite for the md-preview Go backend.
 package main
 
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -211,6 +213,161 @@ func TestLoadMarkdownRendersWikiLinks(t *testing.T) {
 	}
 	if !strings.Contains(payload.HTML, ">display text<") {
 		t.Fatalf("expected wikilink alias display text, got: %s", payload.HTML)
+	}
+}
+
+func TestLoadMarkdownServesLocalImagesThroughOpaqueAssets(t *testing.T) {
+	dir := t.TempDir()
+	imagePath := filepath.Join(dir, "研究 框架图.svg")
+	imageBody := `<svg xmlns="http://www.w3.org/2000/svg"><text>framework</text></svg>`
+	if err := os.WriteFile(imagePath, []byte(imageBody), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	md := filepath.Join(dir, "doc.md")
+	source := "![研究框架图](./研究%20框架图.svg)\n\n![remote](https://example.com/image.png)"
+	if err := os.WriteFile(md, []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := app.LoadMarkdown()
+	if payload.Error != "" {
+		t.Fatalf("expected success, got error %q", payload.Error)
+	}
+
+	prefix := `src="` + localAssetPrefix
+	start := strings.Index(payload.HTML, prefix)
+	if start < 0 {
+		t.Fatalf("expected local asset URL, got: %s", payload.HTML)
+	}
+	start += len(`src="`)
+	end := strings.Index(payload.HTML[start:], `"`)
+	if end < 0 {
+		t.Fatalf("expected terminated image source, got: %s", payload.HTML)
+	}
+	assetURL := payload.HTML[start : start+end]
+	if !strings.Contains(payload.HTML, `src="https://example.com/image.png"`) {
+		t.Fatalf("expected remote image URL to remain unchanged, got: %s", payload.HTML)
+	}
+
+	recorder := httptest.NewRecorder()
+	newLocalAssetHandler(app).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, assetURL, nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected local asset response 200, got %d", recorder.Code)
+	}
+	if recorder.Body.String() != imageBody {
+		t.Fatalf("expected SVG body %q, got %q", imageBody, recorder.Body.String())
+	}
+	if recorder.Header().Get("Content-Type") != "image/svg+xml" {
+		t.Fatalf("expected SVG content type, got %q", recorder.Header().Get("Content-Type"))
+	}
+	if recorder.Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Fatal("expected nosniff header")
+	}
+
+	unknown := httptest.NewRecorder()
+	newLocalAssetHandler(app).ServeHTTP(unknown, httptest.NewRequest(http.MethodGet, localAssetPrefix+strings.Repeat("0", 64), nil))
+	if unknown.Code != http.StatusNotFound {
+		t.Fatalf("expected unknown asset to return 404, got %d", unknown.Code)
+	}
+}
+
+func TestResolveLocalImagePathRejectsUnsupportedSources(t *testing.T) {
+	dir := t.TempDir()
+	textPath := filepath.Join(dir, "secret.txt")
+	if err := os.WriteFile(textPath, []byte("secret"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []string{
+		"secret.txt",
+		"missing.png",
+		".",
+		"https://example.com/image.png",
+		"//example.com/image.png",
+		filepath.ToSlash(textPath),
+	}
+	for _, destination := range cases {
+		if path, ok := resolveLocalImagePath(dir, destination); ok {
+			t.Fatalf("expected %q to be rejected, got %q", destination, path)
+		}
+	}
+}
+
+func TestLocalImageAssetsExpireWhenDocumentChanges(t *testing.T) {
+	dir := t.TempDir()
+	firstImage := filepath.Join(dir, "first.png")
+	if err := os.WriteFile(firstImage, []byte("first"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	firstMarkdown := filepath.Join(dir, "first.md")
+	if err := os.WriteFile(firstMarkdown, []byte("![first](first.png)"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	secondMarkdown := filepath.Join(dir, "second.md")
+	if err := os.WriteFile(secondMarkdown, []byte("# no images"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: firstMarkdown, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := app.LoadMarkdown()
+	start := strings.Index(first.HTML, localAssetPrefix)
+	if start < 0 {
+		t.Fatalf("expected first document asset URL, got: %s", first.HTML)
+	}
+	end := strings.Index(first.HTML[start:], `"`)
+	assetURL := first.HTML[start : start+end]
+
+	app.fileMu.Lock()
+	app.cfg.File = secondMarkdown
+	app.fileMu.Unlock()
+	second := app.LoadMarkdown()
+	if second.Error != "" {
+		t.Fatalf("expected second document to load, got %q", second.Error)
+	}
+	recorder := httptest.NewRecorder()
+	newLocalAssetHandler(app).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, assetURL, nil))
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("expected expired asset to return 404, got %d", recorder.Code)
+	}
+}
+
+func TestExportHTMLKeepsRelativeLocalImagePath(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "figure.png"), []byte("image"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	md := filepath.Join(dir, "note.md")
+	if err := os.WriteFile(md, []byte("![figure](figure.png)"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	outputPath, err := app.ExportHTML("", "github-light")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(outputPath)
+
+	exported, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(exported), `src="figure.png"`) {
+		t.Fatalf("expected relative image path in export, got: %s", exported)
+	}
+	if strings.Contains(string(exported), localAssetPrefix) {
+		t.Fatalf("export must not contain desktop asset URLs, got: %s", exported)
 	}
 }
 

@@ -1,5 +1,5 @@
-// INPUT: CLI config, Markdown files, Wails runtime, goldmark, bluemonday, YAML frontmatter.
-// OUTPUT: Wails-bound preview application, sanitized rendered HTML, export and print actions.
+// INPUT: CLI config, Markdown files, Wails runtime, goldmark, bluemonday, YAML frontmatter, local image registry.
+// OUTPUT: Wails-bound preview application, sanitized rendered HTML, local image assets, export and print actions.
 // POS: Desktop app backend and Markdown rendering core for md-preview.
 package main
 
@@ -25,6 +25,7 @@ import (
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	gfmhtml "github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/text"
 	"go.abhg.dev/goldmark/wikilink"
 	"gopkg.in/yaml.v3"
 )
@@ -80,6 +81,8 @@ type App struct {
 	fileMu       sync.RWMutex
 	theme        string
 	themeMu      sync.RWMutex
+	assetMu      sync.RWMutex
+	localAssets  map[string]string
 
 	updateMu             sync.Mutex
 	updateStatus         UpdateStatus
@@ -660,6 +663,14 @@ func (a *App) emitIfChanged(payload PreviewPayload) {
 }
 
 func (a *App) renderMarkdown() PreviewPayload {
+	return a.renderMarkdownPayload(true)
+}
+
+func (a *App) renderMarkdownPayload(rewriteLocalImages bool) PreviewPayload {
+	if rewriteLocalImages {
+		a.replaceLocalAssets(nil)
+	}
+
 	filePath := a.currentFilePath()
 	if filePath == "" {
 		return errorPayload("", "No Markdown file path configured. Run with md-preview <file.md>.")
@@ -676,14 +687,23 @@ func (a *App) renderMarkdown() PreviewPayload {
 
 	fm, body := extractFrontmatter(source)
 
+	document := a.md.Parser().Parse(text.NewReader(body))
+	localAssets := map[string]string(nil)
+	if rewriteLocalImages {
+		localAssets = rewriteLocalImageDestinations(document, filePath)
+	}
+
 	var rendered strings.Builder
-	if err := a.md.Convert(body, &byteBuffer{builder: &rendered}); err != nil {
+	if err := a.md.Renderer().Render(&byteBuffer{builder: &rendered}, body, document); err != nil {
 		return errorPayload(a.cfg.File, fmt.Sprintf("cannot render Markdown: %v", err))
 	}
 
 	version, err := fileVersion(filePath)
 	if err != nil {
 		return errorPayload(filePath, err.Error())
+	}
+	if rewriteLocalImages && a.currentFilePath() == filePath {
+		a.replaceLocalAssets(localAssets)
 	}
 
 	return PreviewPayload{
@@ -696,7 +716,7 @@ func (a *App) renderMarkdown() PreviewPayload {
 }
 
 func (a *App) ExportHTML(path string, theme string) (string, error) {
-	payload := a.renderMarkdown()
+	payload := a.renderMarkdownPayload(false)
 	if payload.Error != "" {
 		return "", fmt.Errorf("cannot export Markdown: %s", payload.Error)
 	}
