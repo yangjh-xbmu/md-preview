@@ -1,5 +1,9 @@
+// INPUT: Wails runtime bindings, rendered Markdown payloads, preview interactions, and theme state.
+// OUTPUT: Desktop Markdown preview UI with safe external-link routing and document navigation.
+// POS: Main React application shell for the md-preview Wails frontend.
 import { useEffect, useRef, useState } from "react";
 import {
+	BrowserOpenURL,
 	ClipboardSetText,
 	EventsOff,
 	EventsOn,
@@ -80,6 +84,11 @@ const fallbackMarkup = "<p>No Markdown file is loaded. Open a file or pass one o
 const statusUnknown = "Loading preview...";
 const themeStorageKey = "md-preview.theme";
 const backendLoadTimeoutMs = 3000;
+
+function isExternalHref(href: string): boolean {
+	const normalized = href.trim().toLowerCase();
+	return normalized.startsWith("http://") || normalized.startsWith("https://") || normalized.startsWith("mailto:");
+}
 
 const themeLabels: Record<ThemeName, string> = {
 	"github-light": "Light",
@@ -348,6 +357,27 @@ function App() {
 	}, [theme]);
 
 	useEffect(() => {
+		const onExternalLinkClick = (event: MouseEvent) => {
+			const target = event.target as Element | null;
+			const anchor = target?.closest("a") as HTMLAnchorElement | null;
+			if (!anchor) {
+				return;
+			}
+
+			const href = anchor.getAttribute("href") || "";
+			if (!isExternalHref(href)) {
+				return;
+			}
+
+			event.preventDefault();
+			BrowserOpenURL(href);
+		};
+
+		document.addEventListener("click", onExternalLinkClick, true);
+		return () => document.removeEventListener("click", onExternalLinkClick, true);
+	}, []);
+
+	useEffect(() => {
 		const onDocumentPointerDown = (event: PointerEvent) => {
 			if (!menuRef.current || menuRef.current.contains(event.target as Node)) {
 				return;
@@ -506,7 +536,7 @@ function App() {
 				if (!anchor) return;
 
 				const href = anchor.getAttribute("href") || "";
-				if (!href || href.startsWith("#") || href.startsWith("http://") || href.startsWith("https://") || href.startsWith("mailto:")) return;
+				if (!href || href.startsWith("#") || isExternalHref(href)) return;
 
 				event.preventDefault();
 
