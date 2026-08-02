@@ -1,6 +1,11 @@
 # SESSION LOG
 
 ## 完成
+- 2026-08-02 排查公式不渲染问题并确认非回归：git 全历史无 KaTeX/MathJax 痕迹，goldmark 从首个版本起只挂 GFM，宏哥此前所见公式渲染来自其他工具。
+- 2026-08-02 实现 KaTeX 公式渲染：app.go 挂 goldmark-katex 扩展，$...$/$$...$$ 服务端渲染为 span+MathML+内联 SVG，bluemonday 精确白名单放行对应标签、class、em 度量样式和 SVG 属性。
+- 2026-08-02 前端 main.tsx 引入 katex.min.css；导出 HTML 不带 KaTeX CSS，模板加 .katex-html{display:none} 回退浏览器原生 MathML。
+- 2026-08-02 新增 TestLoadMarkdownRendersMath 与 TestExportHTMLMathFallsBackToMathML 两个测试，go test 全绿，wails build 成功并重建本地 exe。
+- 2026-08-02 README 加数学公式示例章节，CLAUDE.md/AGENTS.md 同步更新；提交 7cfb209/1f4e46b 并推送，打 v0.1.6 标签，Release workflow 成功产出四平台产物。
 - 2026-06-22 按 speckit 工作流（specify → plan → tasks → analyze → implement → PR）完成 Mermaid 渲染支持功能开发，产物在 specs/002-mermaid-support/。
 - 2026-06-22 前端集成 mermaid 11：新增 frontend/src/mermaid.ts helper（封装 initialize/render/主题映射/按块错误隔离），App.tsx 加 [contentHtml, theme] 联合 effect 先于 Prism 替换 language-mermaid 块为 SVG，App.css 加 .md-mermaid 样式与 sepia 容器背景。
 - 2026-06-22 app.go exportHTMLTemplate 加 Mermaid CDN 脚本与 DOMContentLoaded 初始化器，导出 HTML 在浏览器打开时自动渲染 mermaid 块，主题按导出主题注入 default/dark。
@@ -26,14 +31,10 @@
 - 2026-06-06 创建跨平台 GitHub Actions Release workflow（Windows/macOS Intel/Apple Silicon/Linux），tag push 自动构建并创建 Draft Release
 - 2026-06-06 添加 CI README 同步检查 workflow，源码变更时 README 未更新则挂 warning
 - 2026-06-06 更新 README.md 加入完整功能特性列表、快捷键表格和版本发布说明
-- 2026-06-06 CLAUDE.md 加入功能变更后同步更新 README 的约束规则
-- 2026-06-06 将 md-preview 从本地 Markdown 浏览器预览方案调整为 Wails 桌面应用方案，使用 Go + Wails + React + Tailwind 构建独立窗口预览。
-- 2026-06-06 增加 GitHub 风格 Markdown 渲染、主题切换、目录导航、代码块高亮、复制按钮和行号等阅读功能。
-- 2026-06-06 增加 HTML 导出、打印导出 PDF、文件选择、拖拽加载和运行中重新加载 Markdown 文件能力。
-- 2026-06-06 修复 Wails 桌面包卡在静态启动页的问题，将 Vite 生产资源路径改为相对路径。
-- 2026-06-06 修复 Prism 语言包加载顺序导致的 `class-name` 启动错误。
 
 ## 发现
+- 2026-08-02 goldmark-katex 用 modernc.org/quickjs 在 Go 侧执行 KaTeX，产物是 span 嵌套 + MathML + 内联 SVG（根号、伸缩括号），bluemonday 需 AllowStyles 放行 em 度量内联样式并精确白名单 MathML/SVG 属性，否则公式被消毒成空壳。
+- 2026-08-02 不带 KaTeX CSS 的静态导出 HTML 可用 .katex-html{display:none} 隐藏视觉层，回退到浏览器原生 MathML 渲染，避免 MathML 与 KaTeX HTML 双重显示。
 - 2026-06-22 mermaid 11 传递依赖 @types/d3-dispatch 使用了 TS 5+ const 类型参数语法，TS 4.6 编译会报 TS1139。解法是升级 typescript 到 5.4 + 加 mermaid-shim.d.ts 走 tsconfig paths 绕开 node_modules 类型加载。
 - 2026-06-22 Go fmt.Sprintf 模板里的 CSS 百分比（如 100%）必须转义成 100%%，否则 vet 报 '%; has unknown verb ;' 编译失败。
 - 2026-06-22 speckit 工作流无 CLI，是 specs/<feature>/ 目录下的人工阶段流程，顺序为 specify → plan → tasks → analyze（checklists/）→ implement → PR，每个阶段有对应文件模板。
@@ -62,4 +63,4 @@
 - 2026-06-06 Windows 原生菜单样式不易定制，轻量阅读器更适合使用不占文档流的浮动自定义菜单并保留快捷键。
 
 ## 待办
-
+无
