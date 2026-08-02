@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FurqanSoftware/goldmark-katex"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/yuin/goldmark"
@@ -387,6 +388,16 @@ const exportHTMLTemplate = `<!doctype html>
   .markdown-body.theme-github-sepia .md-mermaid {
     background: rgba(234, 213, 167, 0.35);
     border-radius: 0.5rem;
+  }
+
+  /* Exported files ship no KaTeX CSS or fonts; fall back to native MathML. */
+  .katex-display {
+    margin: 1em 0;
+    text-align: center;
+  }
+
+  .katex-html {
+    display: none;
   }
 </style>
 <script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
@@ -842,10 +853,24 @@ func errorPayload(filePath, message string) PreviewPayload {
 
 func newRenderer() goldmark.Markdown {
 	return goldmark.New(
-		goldmark.WithExtensions(extension.GFM, extension.Footnote, &wikilink.Extender{}),
+		goldmark.WithExtensions(extension.GFM, extension.Footnote, &wikilink.Extender{}, &katex.Extender{}),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
 		goldmark.WithRendererOptions(gfmhtml.WithXHTML()),
 	)
+}
+
+// KaTeX renders math as nested spans with metric styles, a MathML tree, and
+// inline SVG for radicals. Allow exactly that vocabulary so sanitized output
+// keeps the rendered formula intact.
+var katexClassPolicy = regexp.MustCompile(`^[A-Za-z0-9 _.-]+$`)
+
+var katexStylePolicy = regexp.MustCompile(`^-?[0-9.]+(em|%)?$`)
+
+var katexMathMLElements = []string{
+	"math", "semantics", "annotation", "mrow", "mi", "mo", "mn", "mtext",
+	"mspace", "msup", "msub", "msubsup", "mfrac", "msqrt", "mroot",
+	"mstyle", "merror", "mpadded", "mphantom", "menclose",
+	"mover", "munder", "munderover", "mtable", "mtr", "mtd",
 }
 
 func markdownPolicy() *bluemonday.Policy {
@@ -857,5 +882,31 @@ func markdownPolicy() *bluemonday.Policy {
 	policy.AllowAttrs("id").Matching(footnoteIDPolicy).OnElements("sup", "li")
 	policy.AllowAttrs("class").Matching(footnoteClassPolicy).OnElements("a", "div")
 	policy.AllowAttrs("role").Matching(footnoteRolePolicy).OnElements("a", "div")
+
+	// KaTeX span soup: classes, metric inline styles, aria-hidden.
+	policy.AllowAttrs("class").Matching(katexClassPolicy).OnElements("span")
+	policy.AllowAttrs("aria-hidden").Matching(regexp.MustCompile(`^true$`)).OnElements("span")
+	policy.AllowStyles("top", "height", "width", "min-width",
+		"margin-left", "margin-right", "padding-left", "padding-right",
+		"vertical-align").Matching(katexStylePolicy).OnElements("span")
+
+	// MathML tree inside .katex-mathml.
+	policy.AllowElements(katexMathMLElements...)
+	policy.AllowAttrs("xmlns").Matching(regexp.MustCompile(`^http://www\.w3\.org/1998/Math/MathML$`)).OnElements("math")
+	policy.AllowAttrs("display").Matching(regexp.MustCompile(`^(block|inline)$`)).OnElements("math")
+	policy.AllowAttrs("encoding").Matching(regexp.MustCompile(`^application/x-tex$`)).OnElements("annotation")
+	policy.AllowAttrs("stretchy", "separator", "accent").Matching(regexp.MustCompile(`^(true|false)$`)).OnElements("mo", "mover", "munder", "munderover")
+	policy.AllowAttrs("lspace", "rspace", "width", "depth", "height").Matching(katexStylePolicy).OnElements("mspace", "mpadded")
+	policy.AllowAttrs("notation").Matching(regexp.MustCompile(`^[a-z ]+$`)).OnElements("menclose")
+	policy.AllowAttrs("mathvariant").Matching(regexp.MustCompile(`^[a-z-]+$`)).OnElements("mi", "mstyle")
+	policy.AllowAttrs("columnalign").Matching(regexp.MustCompile(`^[a-z ]+$`)).OnElements("mtable", "mtr", "mtd")
+
+	// Inline SVG used for radicals and stretchy delimiters.
+	policy.AllowElements("svg", "path")
+	policy.AllowAttrs("xmlns").Matching(regexp.MustCompile(`^http://www\.w3\.org/2000/svg$`)).OnElements("svg")
+	policy.AllowAttrs("width", "height").Matching(regexp.MustCompile(`^[0-9.]+em$`)).OnElements("svg")
+	policy.AllowAttrs("viewBox").Matching(regexp.MustCompile(`^[0-9. ]+$`)).OnElements("svg")
+	policy.AllowAttrs("preserveAspectRatio").Matching(regexp.MustCompile(`^[A-Za-z ]+$`)).OnElements("svg")
+	policy.AllowAttrs("d").Matching(regexp.MustCompile(`^[MmLlHhVvCcSsZz0-9.,\s-]+$`)).OnElements("path")
 	return policy
 }

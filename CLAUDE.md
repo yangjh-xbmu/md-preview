@@ -11,7 +11,8 @@
 ## 关键实现
 
 - `main.go`: CLI 参数解析、Wails 启动，以及内嵌前端资源与本地图片 Handler 的装配。
-- `app.go`: `App` 结构体、`LoadMarkdown`、`CurrentVersion`、本地图片白名单、文件监听和事件发送（`markdown-updated`）。`exportHTMLTemplate` 内嵌 Mermaid CDN 与初始化脚本，导出 HTML 在浏览器打开时自动渲染 mermaid 代码块。
+- `app.go`: `App` 结构体、`LoadMarkdown`、`CurrentVersion`、本地图片白名单、文件监听和事件发送（`markdown-updated`）。`exportHTMLTemplate` 内嵌 Mermaid CDN 与初始化脚本，导出 HTML 在浏览器打开时自动渲染 mermaid 代码块。`newRenderer` 挂载 `goldmark-katex`，`$...$` / `$$...$$` 在服务端渲染为 KaTeX HTML（span + MathML + 内联 SVG），`markdownPolicy` 用精确白名单放行对应标签、class、em 度量内联样式和 SVG 属性。
+- `frontend/src/main.tsx`: 入口同时引入 `katex/dist/katex.min.css`，为服务端渲染的 KaTeX HTML 提供字体与布局样式。
 - `local_assets.go`: 解析 Markdown 相对图片路径，生成不暴露磁盘路径的资源 ID，只向 Wails WebView 提供当前文档渲染时登记的图片文件。
 - `frontend/src/App.tsx`: GitHub 风格 Markdown 展示界面，订阅 `markdown-updated`，将 HTTP、HTTPS 和邮件链接交给系统默认应用。`contentHtml` 与 `theme` 联合 effect 调用 `renderMermaidBlocks`，先于 Prism 把 `pre > code.language-mermaid` 替换为 `<div class="md-mermaid">` 并渲染 SVG。
 - `frontend/src/mermaid.ts`: Mermaid 渲染助手。封装 `mermaid.initialize`、`mermaid.render`、主题映射（light/sepia → default，dark → dark）和按块错误处理。源码保存在 `data-mermaid-source` 属性，主题切换时据此重渲染。

@@ -6,7 +6,7 @@ Small Go and Wails app for previewing a local Markdown file as rendered GitHub-s
 
 ## Logic
 
-The CLI validates one `.md` or `.markdown` file, starts the Wails desktop app, renders the file with goldmark GFM and footnote support, sanitizes generated HTML with bluemonday, and serves the React preview surface. When watch mode is enabled, the desktop backend polls the file version and emits reload events after the file changes.
+The CLI validates one `.md` or `.markdown` file, starts the Wails desktop app, renders the file with goldmark GFM, footnote and KaTeX math support, sanitizes generated HTML with bluemonday, and serves the React preview surface. When watch mode is enabled, the desktop backend polls the file version and emits reload events after the file changes.
 
 ## Constraints
 
@@ -22,7 +22,7 @@ The CLI validates one `.md` or `.markdown` file, starts the Wails desktop app, r
 | --- | --- | --- |
 | CLI entry | `main.go` | Argument parsing, file validation, compatibility flags, Wails app startup |
 | Preview styles | `frontend/src/App.css` | Desktop shell, Markdown content, footnotes, themes, print and frontmatter styling |
-| Desktop backend | `app.go` | Wails binding, Markdown rendering, footnote sanitization, file watching, export and print actions |
+| Desktop backend | `app.go` | Wails binding, Markdown rendering, footnote and KaTeX sanitization, file watching, export and print actions |
 | Local image assets | `local_assets.go` | Relative image resolution, opaque resource IDs, allowlisted Wails asset responses |
 | Frontend shell | `frontend/src/App.tsx` | Preview state, shortcuts, Wiki history, external-link routing, menus and document actions |
 | Mermaid helper | `frontend/src/mermaid.ts` | Mermaid initialize, theme mapping, per-block SVG render with error isolation |

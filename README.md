@@ -17,6 +17,7 @@ capabilities:
 ## 功能特性
 
 - **Markdown 渲染**：goldmark + GFM（表格、任务列表、删除线等），经 bluemonday 安全过滤
+- **数学公式**：支持 KaTeX 语法的行内公式 `$...$` 和块级公式 `$$...$$`，服务端渲染为 HTML，跟随预览界面直接显示
 - **本地图片**：支持相对路径引用 PNG、JPEG、GIF、WebP 和 SVG，通过当前文档的受控资源白名单加载
 - **Mermaid 图表**：支持 ` ```mermaid ` 代码块渲染为 SVG 流程图、时序图、类图、状态图、甘特图、饼图等，跟随主题切换调色板，导出 HTML 同样可渲染
 - **脚注渲染**：支持 `[^note]` 与 `[^note]: ...` 形式的 Markdown 脚注

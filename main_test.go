@@ -118,6 +118,45 @@ func TestLoadMarkdownRendersAndSanitizes(t *testing.T) {
 	}
 }
 
+func TestLoadMarkdownRendersMath(t *testing.T) {
+	dir := t.TempDir()
+	md := filepath.Join(dir, "doc.md")
+	source := strings.Join([]string{
+		"Inline $h \\geq 2$ math.",
+		"",
+		"$$",
+		"\\sqrt{x^2+1} = \\frac{a}{b}",
+		"$$",
+	}, "\n")
+	if err := os.WriteFile(md, []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := app.LoadMarkdown()
+	if payload.Error != "" {
+		t.Fatalf("expected success, got error %q", payload.Error)
+	}
+	for _, want := range []string{
+		`class="katex"`,
+		`class="katex-display"`,
+		"<math",
+		"application/x-tex",
+		"<svg",
+		`style="height:`,
+	} {
+		if !strings.Contains(payload.HTML, want) {
+			t.Fatalf("expected sanitized HTML to keep %q, got: %s", want, payload.HTML)
+		}
+	}
+	if strings.Contains(strings.ToLower(payload.HTML), "<script") {
+		t.Fatalf("script tag was not sanitized: %s", payload.HTML)
+	}
+}
+
 func TestLoadMarkdownRendersHeadingWithUTF8BOM(t *testing.T) {
 	dir := t.TempDir()
 	md := filepath.Join(dir, "doc.md")
@@ -753,6 +792,38 @@ func TestExportHTMLIncludesMermaidRuntime(t *testing.T) {
 	}
 	if strings.Contains(strings.ToLower(exported), "<script>alert(1)</script>") {
 		t.Fatalf("expected inline script tag to be sanitized in export")
+	}
+}
+
+func TestExportHTMLMathFallsBackToMathML(t *testing.T) {
+	dir := t.TempDir()
+	md := filepath.Join(dir, "note.md")
+	if err := os.WriteFile(md, []byte("Area $A = \\pi r^2$.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: md, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outputPath, err := app.ExportHTML("", "github-light")
+	if err != nil {
+		t.Fatalf("expected export success: %v", err)
+	}
+	defer os.Remove(outputPath)
+
+	raw, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("expected exported file: %v", err)
+	}
+
+	exported := string(raw)
+	if !strings.Contains(exported, "<math") {
+		t.Fatalf("expected exported HTML to keep MathML markup, got: %s", exported)
+	}
+	if !strings.Contains(exported, ".katex-html") {
+		t.Fatalf("expected exported HTML to hide KaTeX HTML spans without KaTeX CSS")
 	}
 }
 
