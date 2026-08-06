@@ -17,6 +17,7 @@
 - `frontend/src/App.tsx`: GitHub 风格 Markdown 展示界面，订阅 `markdown-updated`，将 HTTP、HTTPS 和邮件链接交给系统默认应用。`contentHtml` 与 `theme` 联合 effect 调用 `renderMermaidBlocks`，先于 Prism 把 `pre > code.language-mermaid` 替换为 `<div class="md-mermaid">` 并渲染 SVG。
 - `frontend/src/mermaid.ts`: Mermaid 渲染助手。封装 `mermaid.initialize`、`mermaid.render`、主题映射（light/sepia → default，dark → dark）和按块错误处理。源码保存在 `data-mermaid-source` 属性，主题切换时据此重渲染。
 - `frontend/src/mermaid-shim.d.ts`: Mermaid 11 自带类型依赖 TS 5+ 语法，项目通过 `tsconfig.json` 的 `paths` 指向本地 shim，跳过 `node_modules/mermaid` 类型加载，避免拉入 `@types/d3-dispatch` 的语法错误。
+- `frontend/src/keyboard.ts`: 纯快捷键判断。`F11` 与 macOS `Option+F11` 切换原生全屏，精确 `Ctrl+Q` 调用 Wails `Quit` 退出应用；谓词测试位于 `frontend/tests/keyboard.test.ts`。
 - `frontend/src/style.css`: Tailwind 入口。
 - `frontend/src/App.css`: 渲染内容细节样式。
 - `wails.json`: 前端构建和前端文件服务配置。
@@ -25,6 +26,9 @@
 
 ```bash
 go test ./...
+shortcut_test_dir="$(mktemp -d)"
+(cd frontend && ./node_modules/.bin/tsc --target ES2020 --module commonjs --strict --outDir "$shortcut_test_dir" src/keyboard.ts tests/keyboard.test.ts)
+node "$shortcut_test_dir/tests/keyboard.test.js"
 wails generate module
 wails dev
 wails build

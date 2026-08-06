@@ -1,36 +1,34 @@
-﻿{
-    "schema_version":  1,
-    "updated_at":  "2026-07-01T04:05:28.3644690Z",
-    "feature_directory":  "specs/005-wiki-link-navigation",
-    "source_of_truth":  {
-                            "constitution":  ".specify/memory/constitution.md",
-                            "spec":  "specs/005-wiki-link-navigation/spec.md",
-                            "plan":  "specs/005-wiki-link-navigation/plan.md",
-                            "tasks":  "specs/005-wiki-link-navigation/tasks.md"
-                        },
-    "supersedes":  [
-                       "speckit.implement"
-                   ],
-    "executor":  "superpowers",
-    "capabilities":  [
-                         "executing-plans",
-                         "test-driven-development",
-                         "verification-before-completion",
-                         "requesting-code-review",
-                         "finishing-a-development-branch"
-                     ],
-    "status":  "complete",
-    "blocked_reason":  null,
-    "artifact_owner":  "claude",
-    "review_only_agents":  [
-
-                           ],
-    "notes":  null,
-    "last_snapshot_id":  "20260701T0405283549147Z-complete",
-    "instructions":  "Use /speckit-superpowers-bridge (Claude Code) or $speckit-superpowers-bridge (Codex). The bridge orchestrates native Superpowers skills against tasks.md; do not run speckit.implement and do not invoke superpowers:writing-plans / :brainstorming for an active Spec Kit feature.",
-    "artifacts_sha256":  {
-                             "spec.md":  "6f9912264f94f0f81cd5f969adb224ab84b616226c50848bee70d846c6a28308",
-                             "plan.md":  "3cb8bcc3af8ed7eb28f3d2307a735da6028f3bbcd97a80722ae97fe67410281e",
-                             "tasks.md":  "7725daf9d9d873a085b189788f0ff5d0f11552404a7baadb399627ce2c493c72"
-                         }
+{
+  "schema_version": 1,
+  "updated_at": "2026-08-06T13:15:53Z",
+  "feature_directory": "specs/006-mac-fullscreen-quit-shortcut",
+  "source_of_truth": {
+    "constitution": ".specify/memory/constitution.md",
+    "spec": "specs/006-mac-fullscreen-quit-shortcut/spec.md",
+    "plan": "specs/006-mac-fullscreen-quit-shortcut/plan.md",
+    "tasks": "specs/006-mac-fullscreen-quit-shortcut/tasks.md"
+  },
+  "supersedes": [
+    "speckit.implement"
+  ],
+  "executor": "superpowers",
+  "capabilities": [
+    "executing-plans",
+    "test-driven-development",
+    "verification-before-completion",
+    "requesting-code-review",
+    "finishing-a-development-branch"
+  ],
+  "status": "complete",
+  "blocked_reason": null,
+  "artifact_owner": "claude",
+  "review_only_agents": [],
+  "notes": null,
+  "last_snapshot_id": "20260806T131553044Z-complete",
+  "instructions": "Use /speckit-superpowers-bridge (Claude Code) or $speckit-superpowers-bridge (Codex). The bridge orchestrates native Superpowers skills against tasks.md; do not run speckit.implement and do not invoke superpowers:writing-plans / :brainstorming for an active Spec Kit feature.",
+  "artifacts_sha256": {
+    "spec.md": "f165eadc657bedf1b8f42b88d7f2a934e0519e92a57e1b07d1b022c1b4ed5617",
+    "plan.md": "9324bb0f26037189576ef7708c17b84f081f9a67371e2c83c5f1662f85818d35",
+    "tasks.md": "a4fef0049a734a463d80227ca56123a8d0ec36580437d3eb919a89fc1ba844d1"
+  }
 }

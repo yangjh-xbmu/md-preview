@@ -9,6 +9,7 @@ import {
 	EventsOn,
 	OnFileDrop,
 	OnFileDropOff,
+	Quit,
 	WindowFullscreen,
 	WindowIsFullscreen,
 	WindowUnfullscreen,
@@ -48,6 +49,7 @@ import "prismjs/plugins/line-numbers/prism-line-numbers";
 import "prismjs/plugins/line-numbers/prism-line-numbers.css";
 import "./App.css";
 import FrontmatterTable from "./FrontmatterTable";
+import { isFullscreenShortcut, isQuitShortcut } from "./keyboard";
 import { renderMermaidBlocks, reinitForTheme } from "./mermaid";
 
 type PreviewPayload = {
@@ -390,7 +392,7 @@ function App() {
 				return;
 			}
 
-			if (event.key === "F11") {
+			if (isFullscreenShortcut(event)) {
 				event.preventDefault();
 				void toggleFullscreen();
 				return;
@@ -407,6 +409,11 @@ function App() {
 			}
 
 			if (!event.ctrlKey && !event.metaKey) {
+				return;
+			}
+			if (isQuitShortcut(event)) {
+				event.preventDefault();
+				Quit();
 				return;
 			}
 
@@ -756,7 +763,7 @@ function App() {
 							</button>
 							<button type="button" role="menuitem" className="md-menu-item" onClick={toggleFullscreen}>
 								<span>{fullscreen ? "Exit Full Screen" : "Full Screen"}</span>
-								<kbd>F11</kbd>
+								<kbd>F11 / ⌥F11</kbd>
 							</button>
 								<button type="button" role="menuitem" className="md-menu-item" onClick={() => { setMenuOpen(false); void navigateBack(); }}>
 									<span>Back</span>

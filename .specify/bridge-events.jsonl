@@ -41,3 +41,12 @@
 
 {"timestamp":"2026-07-01T04:05:28.4598267Z","action":"handoff","status":"complete","feature_directory":"specs/005-wiki-link-navigation","decision":"updated","reason":"","actor":"claude","prior_actor":"claude","snapshot_id":"20260701T0405283549147Z-complete"}
 
+{"timestamp":"2026-08-06T12:48:42Z","action":"guard","status":"allow","feature_directory":"specs/005-wiki-link-navigation","decision":"allow","reason":"","actor":"codex","checked_action":"speckit.plan"}
+{"timestamp":"2026-08-06T12:52:00Z","action":"guard","status":"allow","feature_directory":"specs/005-wiki-link-navigation","decision":"allow","reason":"","actor":"codex","checked_action":"speckit.tasks"}
+{"timestamp":"2026-08-06T12:54:05Z","action":"handoff","status":"ready","feature_directory":"specs/006-mac-fullscreen-quit-shortcut","decision":"updated","reason":"actor change claude → codex","actor":"codex","prior_actor":"claude","snapshot_id":"20260806T125405029Z-ready"}
+{"timestamp":"2026-08-06T12:56:35Z","action":"handoff","status":"ready","feature_directory":"specs/006-mac-fullscreen-quit-shortcut","decision":"updated","reason":"","actor":"codex","prior_actor":"codex","snapshot_id":"20260806T125635275Z-ready"}
+{"timestamp":"2026-08-06T12:56:41Z","action":"handoff","status":"executing","feature_directory":"specs/006-mac-fullscreen-quit-shortcut","decision":"updated","reason":"","actor":"codex","prior_actor":"codex","snapshot_id":"20260806T125641384Z-executing"}
+{"timestamp":"2026-08-06T12:56:41Z","action":"guard","status":"allow","feature_directory":"specs/006-mac-fullscreen-quit-shortcut","decision":"allow","reason":"","actor":"codex","checked_action":"superpowers:executing-plans"}
+{"timestamp":"2026-08-06T13:15:38Z","action":"guard","status":"allow","feature_directory":"specs/006-mac-fullscreen-quit-shortcut","decision":"allow","reason":"","actor":"codex","checked_action":"superpowers:finishing-a-development-branch"}
+{"timestamp":"2026-08-06T13:15:53Z","action":"handoff","status":"complete","feature_directory":"specs/006-mac-fullscreen-quit-shortcut","decision":"updated","reason":"","actor":"codex","prior_actor":"codex","snapshot_id":"20260806T131553044Z-complete"}
+{"event":"artifact_drift_detected","timestamp":"2026-08-06T13:15:53Z","actor":"codex","feature_directory":"specs/006-mac-fullscreen-quit-shortcut","drifted_artifacts":[{"path":"tasks.md","old_sha256":"4ba489985a40a229c2790189e7b33c1d2ded0b4bbaf185fcdcace14f37472cf4","new_sha256":"a4fef0049a734a463d80227ca56123a8d0ec36580437d3eb919a89fc1ba844d1"}]}
