@@ -17,6 +17,7 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed all:frontend/dist
@@ -128,6 +129,9 @@ func validateMarkdownFile(path string) error {
 }
 
 func runDesktopApp(app *App) error {
+	userDataDir := filepath.Join(os.TempDir(), "md-preview-webview2")
+	_ = os.MkdirAll(userDataDir, 0o755)
+
 	return wails.Run(&options.App{
 		Title:  "md-preview",
 		Width:  1280,
@@ -140,6 +144,11 @@ func runDesktopApp(app *App) error {
 		OnStartup:        app.startup,
 		Bind: []interface{}{
 			app,
+		},
+		Windows: &windows.Options{
+			WebviewUserDataPath:                 userDataDir,
+			WebviewDisableRendererCodeIntegrity: true,
+			WebviewGpuIsDisabled:                true,
 		},
 	})
 }
