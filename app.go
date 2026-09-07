@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -515,7 +516,43 @@ func (a *App) SetFile(path string) PreviewPayload {
 	return payload
 }
 
+// findVaultOrWorkspaceRoot walks up the directory tree looking for an Obsidian vault
+// (marked by a .obsidian directory) or a Git workspace (marked by a .git directory).
+func findVaultOrWorkspaceRoot(startDir string) string {
+	curr := filepath.Clean(startDir)
+	// First pass: look specifically for Obsidian vault root (.obsidian)
+	for {
+		if fi, err := os.Stat(filepath.Join(curr, ".obsidian")); err == nil && fi.IsDir() {
+			return curr
+		}
+		parent := filepath.Dir(curr)
+		if parent == curr {
+			break
+		}
+		curr = parent
+	}
+
+	// Second pass: fallback to Git workspace root (.git)
+	curr = filepath.Clean(startDir)
+	for {
+		if _, err := os.Stat(filepath.Join(curr, ".git")); err == nil {
+			return curr
+		}
+		parent := filepath.Dir(curr)
+		if parent == curr {
+			break
+		}
+		curr = parent
+	}
+
+	return ""
+}
+
 // ResolveWikiLink resolves a wiki link href to an absolute .md file path.
+// It complies with Obsidian's link resolution rules:
+// 1. Path relative to current file's directory.
+// 2. Vault/workspace-relative path (e.g. [[20_Library/理论/分布式认知]]).
+// 3. Bare-title / shortest-path lookup across the vault (e.g. [[分布式认知]]).
 // Returns empty string if the target file does not exist or is not a Markdown file.
 func (a *App) ResolveWikiLink(href string) string {
 	href = strings.TrimSpace(href)
@@ -545,17 +582,73 @@ func (a *App) ResolveWikiLink(href string) string {
 		return ""
 	}
 
-	candidate := filepath.Join(filepath.Dir(current), decoded)
-	absPath, err := filepath.Abs(candidate)
-	if err != nil {
-		return ""
+	currentDir := filepath.Dir(current)
+
+	// Attempt 1: Relative to current file's directory
+	candidate := filepath.Join(currentDir, decoded)
+	if absPath, err := filepath.Abs(candidate); err == nil {
+		if err := validateMarkdownFile(absPath); err == nil {
+			return absPath
+		}
 	}
 
-	if err := validateMarkdownFile(absPath); err != nil {
-		return ""
+	// Attempt 2: Vault/workspace-relative resolution (Obsidian vault root)
+	root := findVaultOrWorkspaceRoot(currentDir)
+	if root != "" {
+		// 2a. Direct vault-relative path: e.g. [[20_Library/理论/分布式认知]]
+		vaultCandidate := filepath.Join(root, decoded)
+		if absPath, err := filepath.Abs(vaultCandidate); err == nil {
+			if err := validateMarkdownFile(absPath); err == nil {
+				return absPath
+			}
+		}
+
+		// 2b. Bare file name / shortest-path search across vault (e.g. [[分布式认知]])
+		targetBase := filepath.Base(decoded)
+		var foundPath string
+		_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() {
+				name := d.Name()
+				if strings.HasPrefix(name, ".") || name == "node_modules" {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+
+			if strings.EqualFold(d.Name(), targetBase) {
+				cleanRel, relErr := filepath.Rel(root, path)
+				if relErr == nil {
+					cleanRelSlash := filepath.ToSlash(cleanRel)
+					decodedSlash := filepath.ToSlash(decoded)
+					// If decoded contained directory components (e.g. "理论/分布式认知.md"),
+					// ensure the found path ends with those components.
+					if strings.HasSuffix(strings.ToLower(cleanRelSlash), strings.ToLower(decodedSlash)) {
+						foundPath = path
+						return fs.SkipAll
+					}
+				}
+				// If decoded was a bare filename with no directory components, match directly.
+				if filepath.Base(decoded) == decoded {
+					foundPath = path
+					return fs.SkipAll
+				}
+			}
+			return nil
+		})
+
+		if foundPath != "" {
+			if absPath, err := filepath.Abs(foundPath); err == nil {
+				if err := validateMarkdownFile(absPath); err == nil {
+					return absPath
+				}
+			}
+		}
 	}
 
-	return absPath
+	return ""
 }
 
 // SetTheme updates the active preview theme and notifies the frontend.

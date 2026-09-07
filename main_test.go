@@ -478,6 +478,58 @@ func TestResolveWikiLink(t *testing.T) {
 	}
 }
 
+func TestResolveWikiLink_ObsidianVault(t *testing.T) {
+	vaultDir := t.TempDir()
+
+	// Create .obsidian directory to mark vault root
+	if err := os.MkdirAll(filepath.Join(vaultDir, ".obsidian"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create subdirectories: 00_Inbox and 20_Library/理论
+	inboxDir := filepath.Join(vaultDir, "00_Inbox")
+	libDir := filepath.Join(vaultDir, "20_Library", "理论")
+	if err := os.MkdirAll(inboxDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(libDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	currentNote := filepath.Join(inboxDir, "知识的诅咒.md")
+	if err := os.WriteFile(currentNote, []byte("# 知识的诅咒"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	targetNote := filepath.Join(libDir, "分布式认知.md")
+	if err := os.WriteFile(targetNote, []byte("# 分布式认知"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp(config{File: currentNote, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Case 1: Vault-relative link (standard Obsidian style with path)
+	resolvedVaultRel := app.ResolveWikiLink("20_Library/理论/分布式认知")
+	if resolvedVaultRel != targetNote {
+		t.Fatalf("expected %q, got %q", targetNote, resolvedVaultRel)
+	}
+
+	// Case 2: Bare title link (Obsidian shortest-path style)
+	resolvedBare := app.ResolveWikiLink("分布式认知")
+	if resolvedBare != targetNote {
+		t.Fatalf("expected %q, got %q", targetNote, resolvedBare)
+	}
+
+	// Case 3: Partial folder link with .html
+	resolvedPartial := app.ResolveWikiLink("理论/分布式认知.html")
+	if resolvedPartial != targetNote {
+		t.Fatalf("expected %q, got %q", targetNote, resolvedPartial)
+	}
+}
+
 func TestExportHTMLIncludesFootnoteStyles(t *testing.T) {
 	dir := t.TempDir()
 	md := filepath.Join(dir, "note.md")
