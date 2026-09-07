@@ -530,6 +530,30 @@ func TestResolveWikiLink_ObsidianVault(t *testing.T) {
 	}
 }
 
+func TestResolveWikiLink_RealMyNotes(t *testing.T) {
+	notePath := `D:\Users\yangjh\Desktop\repos\MyNotes\00_Inbox\知识的诅咒.md`
+	if _, err := os.Stat(notePath); err != nil {
+		t.Skip("local file not found")
+	}
+
+	app, err := NewApp(config{File: notePath, Watch: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	target := app.ResolveWikiLink("20_Library/理论/分布式认知")
+	t.Logf("Resolved vault-relative target: %s", target)
+	if !strings.HasSuffix(filepath.ToSlash(target), "20_Library/理论/分布式认知.md") {
+		t.Fatalf("unexpected target: %s", target)
+	}
+
+	bareTarget := app.ResolveWikiLink("分布式认知")
+	t.Logf("Resolved bare title target: %s", bareTarget)
+	if !strings.HasSuffix(filepath.ToSlash(bareTarget), "20_Library/理论/分布式认知.md") {
+		t.Fatalf("unexpected bare target: %s", bareTarget)
+	}
+}
+
 func TestExportHTMLIncludesFootnoteStyles(t *testing.T) {
 	dir := t.TempDir()
 	md := filepath.Join(dir, "note.md")
