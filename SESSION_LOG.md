@@ -1,6 +1,11 @@
 # SESSION LOG
 
 ## 完成
+- 2026-09-08 修复 Prism 运算符、实体、URL 与 CSS 字符串的半透明白底，消除 JSON 冒号背景方块；3 种主题与 4 种语言的浏览器回归通过，提交 d802bbc。
+- 2026-09-08 前端构建、Windows Wails 构建和 Go 测试通过，并通过实际桌面窗口截图确认 README 正常渲染。
+- 2026-09-08 发布脚本统一使用 Bash 注入版本号，推送 v0.1.8 并完成 Windows、macOS 双架构与 Linux 发布包，GitHub Release 设为最新版。
+- 2026-09-08 按独立 Markdown 阅读器定位完善 GitHub 简介、10 个 Topics 和下载主页，重整 README 并加入真实截图、窗口自动刷新动图、Agent 指南和语法示例，提交 7165fa0。
+- 2026-09-08 经用户确认加入 MIT LICENSE 并更新 README，GitHub 已识别 MIT；文档链接检查及 README CI 通过，提交 4f7551f。
 - 2026-08-02 排查公式不渲染问题并确认非回归：git 全历史无 KaTeX/MathJax 痕迹，goldmark 从首个版本起只挂 GFM，宏哥此前所见公式渲染来自其他工具。
 - 2026-08-02 实现 KaTeX 公式渲染：app.go 挂 goldmark-katex 扩展，$...$/$$...$$ 服务端渲染为 span+MathML+内联 SVG，bluemonday 精确白名单放行对应标签、class、em 度量样式和 SVG 属性。
 - 2026-08-02 前端 main.tsx 引入 katex.min.css；导出 HTML 不带 KaTeX CSS，模板加 .katex-html{display:none} 回退浏览器原生 MathML。
@@ -26,13 +31,11 @@
 - 2026-06-06 修复 GitHub Actions Release workflow，经 7 次迭代使四个平台（Win/macOS Intel/macOS ARM/Linux）全部构建成功并生成 Draft Release
 - 2026-06-06 清理失败标签和旧 Release（v1.0.0/v1.1.0/v0.0.1-v0.0.6），仅保留 v0.0.7
 - 2026-06-06 左键选中正文文本自动复制到系统剪贴板，匹配 WezTerm 交互体验
-- 2026-06-06 打印 PDF 时隐藏浮动菜单、TOC 目录、状态栏和面板圆角/边框/阴影，采用 @media print + JS .printing class 双方案兼容 WebView2
-- 2026-06-06 窗口标题栏显示当前打开的文件名
-- 2026-06-06 创建跨平台 GitHub Actions Release workflow（Windows/macOS Intel/Apple Silicon/Linux），tag push 自动构建并创建 Draft Release
-- 2026-06-06 添加 CI README 同步检查 workflow，源码变更时 README 未更新则挂 warning
-- 2026-06-06 更新 README.md 加入完整功能特性列表、快捷键表格和版本发布说明
 
 ## 发现
+- 2026-09-08 Prism 默认主题会给 operator、entity、url 和 CSS string 添加半透明白底，定制代码块主题时需要同时覆盖这些 token 的背景。
+- 2026-09-08 Windows 预览启动验证应检查窗口正文或截图，单独看到进程存在无法证明文档已显示；共享桌面录制可用 PrintWindow 捕获指定窗口，避免录入其他窗口内容。
+- 2026-09-08 跨平台 GitHub Actions 使用 Bash 参数展开注入版本号时，需要显式指定 shell: bash，避免 Windows 默认 PowerShell 解释不同。
 - 2026-08-02 goldmark-katex 用 modernc.org/quickjs 在 Go 侧执行 KaTeX，产物是 span 嵌套 + MathML + 内联 SVG（根号、伸缩括号），bluemonday 需 AllowStyles 放行 em 度量内联样式并精确白名单 MathML/SVG 属性，否则公式被消毒成空壳。
 - 2026-08-02 不带 KaTeX CSS 的静态导出 HTML 可用 .katex-html{display:none} 隐藏视觉层，回退到浏览器原生 MathML 渲染，避免 MathML 与 KaTeX HTML 双重显示。
 - 2026-06-22 mermaid 11 传递依赖 @types/d3-dispatch 使用了 TS 5+ const 类型参数语法，TS 4.6 编译会报 TS1139。解法是升级 typescript 到 5.4 + 加 mermaid-shim.d.ts 走 tsconfig paths 绕开 node_modules 类型加载。
@@ -60,7 +63,6 @@
 - 2026-06-06 Prism 语言包存在隐式依赖，`cpp` 需要先加载 `clike` 和 `c`，`markdown` 需要先加载 `markup`。
 - 2026-06-06 桌面应用应提供 HTML 静态兜底和 React 入口错误显示，便于区分窗口启动失败、资源加载失败和业务渲染失败。
 - 2026-06-06 暴露给 Wails 前端绑定的 Go 结构体最好使用导出类型，生成的 TypeScript 类型更清晰稳定。
-- 2026-06-06 Windows 原生菜单样式不易定制，轻量阅读器更适合使用不占文档流的浮动自定义菜单并保留快捷键。
 
 ## 待办
 无
