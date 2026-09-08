@@ -1,215 +1,139 @@
----
-purpose: 一个使用 Go + Wails + React + Tailwind 构建的本地 Markdown 预览桌面应用，提供稳定、干净的渲染体验。
-status: active
-next_steps: []
-capabilities:
-  - markdown-preview
-  - gfm-rendering
-  - local-image-preview
-  - desktop-app
----
 # md-preview
 
-一个小型本地 Markdown 预览桌面应用，使用 Go + Wails + React + Tailwind 构建。
+**一个窗口，清晰阅读本地 Markdown。**
 
-项目核心目标是：给本地文件提供稳定、干净且可重复的 Markdown 渲染体验，直接在独立窗口中查看，避免启动浏览器或暴露额外服务。
+A standalone Markdown viewer for Windows, macOS, and Linux, with live reload, Mermaid diagrams, KaTeX math, and Wiki links.
+
+[下载最新版](https://github.com/yangjh-xbmu/md-preview/releases/latest) · [快速开始](#快速开始) · [Agent 使用场景](#让-agent-写文档随时查看预览) · [语法示例](docs/examples/syntax.md) · [反馈问题](https://github.com/yangjh-xbmu/md-preview/issues)
+
+![md-preview 桌面实拍：米黄色主题下的 Mermaid 图表、数学公式与 JSON 高亮](docs/assets/preview.png)
+
+打开笔记、README、课程讲义或技术方案，在独立桌面窗口中阅读。支持 Windows、macOS 和 Linux，文件保存后自动刷新。
+
+## 下载
+
+前往 [最新 Release](https://github.com/yangjh-xbmu/md-preview/releases/latest)，按系统下载并解压对应文件。
+
+| 系统 | 下载文件名 | 解压后打开 |
+| --- | --- | --- |
+| Windows x64 | `md-preview-v版本号-windows-amd64.zip` | `md-preview.exe` |
+| macOS Apple Silicon | `md-preview-v版本号-darwin-arm64.tar.gz` | `md-preview.app` |
+| macOS Intel | `md-preview-v版本号-darwin-amd64.tar.gz` | `md-preview.app` |
+| Linux x64 | `md-preview-v版本号-linux-amd64.tar.gz` | `md-preview` |
+
+Linux 需要 GTK 3 与 WebKitGTK 4.0 运行库。macOS 发布包尚未经过 Apple 公证，首次打开可能需要在系统安全设置中允许运行。
+
+## 快速开始
+
+1. 下载并解压适合当前系统的发布包。
+2. 打开应用，点击 **Open File**，或将 `.md` / `.markdown` 文件拖入窗口。
+3. 在自己的编辑器中修改文件并保存，预览会自动刷新。
+
+也可以从终端指定文件。Windows 在解压目录中运行：
+
+```powershell
+.\md-preview.exe "D:\notes\plan.md"
+```
+
+macOS 在解压目录中运行：
+
+```bash
+open ./md-preview.app --args "$PWD/plan.md"
+```
+
+Linux 在解压目录中运行：
+
+```bash
+./md-preview ./plan.md
+```
+
+想先看看效果？下载或克隆本仓库，打开 [预览样例](docs/examples/preview.md)。
 
 ## 功能特性
 
-- **Markdown 渲染**：goldmark + GFM（表格、任务列表、删除线等），经 bluemonday 安全过滤
-- **数学公式**：支持 KaTeX 语法的行内公式 `$...$` 和块级公式 `$$...$$`，服务端渲染为 HTML，跟随预览界面直接显示
-- **本地图片**：支持相对路径引用 PNG、JPEG、GIF、WebP 和 SVG，通过当前文档的受控资源白名单加载
-- **Mermaid 图表**：支持 ` ```mermaid ` 代码块渲染为 SVG 流程图、时序图、类图、状态图、甘特图、饼图等，跟随主题切换调色板，导出 HTML 同样可渲染
-- **脚注渲染**：支持 `[^note]` 与 `[^note]: ...` 形式的 Markdown 脚注
-- **Wiki 链接**：支持 `[[页面名]]`、`[[文件.pdf]]` 和 `[[页面|显示文本]]` 语法的双向链接
-- **外部链接**：HTTP、HTTPS 和邮件链接交由系统默认应用打开，不会替换 Markdown 预览界面
-- **Frontmatter 渲染**：自动解析 YAML frontmatter，以 GitHub 风格属性表展示，支持嵌套对象、数组标签、链接识别，跟随主题适配
-- **语法高亮**：Prism.js 支持 14 种编程语言，带行号显示和代码块复制按钮
-- **文件监听**：1 秒轮询，文件变更自动刷新预览
-- **目录导航**：自动提取标题生成 TOC 侧边栏，点击跳转
-- **三套主题**：Light / Dark / Sepia，选择持久化存储
-- **拖放支持**：直接拖入 `.md` 文件即可切换预览
-- **导出 HTML**：导出带内联样式的独立 HTML 文件，支持主题选择
-- **自动更新**：启动时默认检查正式发布版本并自动准备可用更新，可在菜单中关闭或手动检查
-- **选中即复制**：鼠标左键选中正文文字，松开后自动复制到系统剪贴板
-- **干净打印**：打印 PDF 时自动隐藏界面 chrome（菜单、目录、状态栏），移除面板装饰
+| 阅读内容 | 支持的体验 |
+| --- | --- |
+| 日常 Markdown | GFM 表格、任务列表、删除线，目录导航与脚注 |
+| 技术文档 | Mermaid 图表、14 种语言的代码高亮、行号与代码复制 |
+| 课程与研究笔记 | KaTeX 行内和块级公式、YAML frontmatter 属性表 |
+| 本地资料 | 相对路径图片、Wiki 链接导航、前进与返回 |
+| 持续阅读 | 保存后自动刷新，Light / Dark / Sepia 三套主题，全屏 |
+| 分享与输出 | HTML 导出、打印 / PDF 输出、选中文字自动复制 |
 
-## 脚注示例
+Markdown HTML 经过安全过滤。支持 PNG、JPEG、GIF、WebP 和 SVG 本地图片；HTTP、HTTPS 与邮件链接交给系统默认应用打开。
 
-下面这段就是实际渲染案例，正文里的脚注标记会显示为编号，脚注内容会集中显示在文末。
+### Wiki 链接支持范围
 
-部分村庄母语保持相对较好；杂居村则更多处在汉语环境包围之中，日常表达、公共交往和新事物命名更容易转向汉语。[^FN-WEI-WENXIAN-BAIMA-2019]
+支持 `[[页面名]]`、`[[目录/页面名]]` 和 `[[页面名|显示文本]]`。点击后按当前目录、Vault / Git 工作区根目录、文件名或路径后缀查找 Markdown 文件。
 
-[^FN-WEI-WENXIAN-BAIMA-2019]: 魏文贤：《白马藏族语言使用现状调查》，2019。
+跨目录搜索需要祖先目录中存在 `.obsidian` 或 `.git`。同名笔记建议写完整路径。此功能提供笔记间导航，不提供反向链接索引、PDF 阅读或 Obsidian 插件运行能力。
 
-对应的 Markdown 源码写法如下：
+### 本地阅读与联网行为
 
-```markdown
-部分村庄母语保持相对较好；杂居村则更多处在汉语环境包围之中，日常表达、公共交往和新事物命名更容易转向汉语。[^FN-WEI-WENXIAN-BAIMA-2019]
+本地 Markdown 的正文、公式和图表在桌面应用内渲染。启动时默认后台检查更新，可以在 **Menu → Updates → Auto Updates** 中关闭。文档中的远程资源可能访问网络；导出 HTML 中的 Mermaid 图表通过 CDN 加载并渲染。
 
-[^FN-WEI-WENXIAN-BAIMA-2019]: 魏文贤：《白马藏族语言使用现状调查》，2019。
+## 让 Agent 写文档，随时查看预览
+
+让编程 Agent 将方案、报告或说明写入本地 Markdown，打开一次预览窗口，后续保存会自动刷新。AI 内容由你使用的 Agent 生成，md-preview 负责显示文件。
+
+![真实桌面录屏：Agent 更新 Markdown 文件后，预览自动显示新内容](docs/assets/live-reload.gif)
+
+将程序加入 `PATH` 后，一条命令即可打开：
+
+```bash
+md-preview ./plan.md
 ```
 
-## Wiki 链接示例
+可以把以下约定加入项目的 Agent 指令：
 
-Wiki 链接是 Obsidian 等笔记工具常用的双向链接语法。md-preview 支持三种写法：
-
-- `[[Foo Bar]]` → 渲染为链接到 `Foo Bar.html` 的超链接，显示文本为"Foo Bar"
-- `[[baz.pdf]]` → 已有扩展名时保持原样，链接到 `baz.pdf`
-- `[[Image|display text]]` → 管道符后为显示文本，链接到 `Image.html`，显示"display text"
-
-点击 Wiki 链接会自动在同目录下查找对应的 `.md` 文件并加载预览，支持中文文件名、带空格文件名以及 URL 编码的链接目标。导航后可用 `Alt+←` 返回，`Alt+→` 前进，与浏览器一致。
-
-下面是实际渲染案例：
-
-这是一个普通 wiki 链接 [[Wiki-Demo]]，带别名的链接 [[Wiki-Demo|点击跳转演示页]]。
-
-对应的 Markdown 源码写法如下：
-
-```markdown
-这是一个普通 wiki 链接 [[Wiki-Demo]]，带别名的链接 [[Wiki-Demo|点击跳转演示页]]。
+```text
+将需要我阅读的方案保存为 Markdown。
+首次生成后，用 md-preview 的绝对路径打开该文件，并让进程独立于终端持续运行。
+后续修改同一文件并保存，由已有窗口自动刷新。
+确认窗口中的正文已显示后，再报告预览完成。
 ```
 
-## Mermaid 图表示例
-
-md-preview 支持 Mermaid 图表语法，把 ` ```mermaid ` 代码块直接渲染为 SVG 图表，常见类型包括 flowchart、sequence、class、state、gantt、pie 等。图表会跟随当前主题切换调色板，导出 HTML 时也会通过 CDN 脚本渲染。
-
-下面是实际渲染案例：
-
-```mermaid
-flowchart LR
-    A[打开 Markdown] --> B{是否含 mermaid}
-    B -- 是 --> C[渲染 SVG 图表]
-    B -- 否 --> D[常规代码高亮]
-    C --> E[显示预览]
-    D --> E
-```
-
-对应的 Markdown 源码写法如下：
-
-````markdown
-```mermaid
-flowchart LR
-    A[打开 Markdown] --> B{是否含 mermaid}
-    B -- 是 --> C[渲染 SVG 图表]
-    B -- 否 --> D[常规代码高亮]
-    C --> E[显示预览]
-    D --> E
-```
-````
-
-## 数学公式示例
-
-md-preview 支持 KaTeX 语法。行内公式用一对 `$` 包裹，比如最终等级 $= \max(\text{基础等级}, \text{信号等级})$，块级公式用 `$$` 单独成段：
-
-$$
-\sqrt{x^2+1} + \sum_{i=1}^{n} i = \frac{n(n+1)}{2}
-$$
-
-对应的 Markdown 源码写法如下：
-
-```markdown
-行内公式：$h \geq 2$ 时信号等级至少 L3。
-
-块级公式：
-$$
-\sqrt{x^2+1} + \sum_{i=1}^{n} i = \frac{n(n+1)}{2}
-$$
-```
+调用示例、Windows 后台启动方式和参数限制见 [Agent 调用指南](docs/agent-usage.md)。
 
 ## 键盘快捷键
 
 | 快捷键 | 功能 |
-|--------|------|
+| --- | --- |
 | `Ctrl+O` | 打开 Markdown 文件 |
 | `Ctrl+S` | 导出 HTML |
 | `Ctrl+P` | 打印 / 导出 PDF |
 | `Ctrl+T` | 显示 / 隐藏目录导航 |
-| `Alt+←` | 返回上一个文档（Wiki 链接导航） |
-| `Alt+→` | 前进到下一个文档（Wiki 链接导航） |
+| `Alt+←` / `Alt+→` | 返回 / 前进（Wiki 链接导航） |
 | `F11` / `Option+F11` | 全屏 / 退出全屏 |
 | `Ctrl+Q` | 退出应用 |
 
-## 安装与运行
+## 更新与反馈
 
-### 自动更新
+正式发布版本支持后台检查更新。在 **Menu → Updates** 中，可以手动检查更新、关闭自动更新，或在下载完成后点击 **Restart to Install**。源码开发构建不支持自动更新。
 
-md-preview 启动时默认检查 GitHub Releases 中的最新正式版本。检查在后台运行，不会阻塞 Markdown 预览加载。
-
-在右上角 `Menu` 的 `Updates` 区域可以：
-
-- 打开或关闭 `Auto Updates`，设置会在重启后保留。
-- 点击 `Check Updates` 手动检查版本，即使自动更新已关闭也可以使用。
-- 当更新已下载并准备好时，点击 `Restart to Install` 完成替换并重启应用。
-
-如果网络不可用、没有兼容当前系统的发布资产，或当前不是正式发布构建，应用会显示非阻塞状态信息，当前预览功能仍可继续使用。
-
-### 直接运行源码
-
-```bash
-go run . <file.md>
-```
-
-### 发布版本方式
-
-```bash
-wails build
-.\build\bin\md-preview.exe <file.md>
-```
-
-## 命令参数
-
-```text
-Usage: md-preview [--browser] [--watch=false] <file.md>
-```
-
-- `--watch=false`  
-  关闭文件监听。对于自动化脚本或单次检查更友好。
-- `--browser`  
-  保留兼容参数，当前仍以桌面模式启动。
-
-## 给 Agent 的调用建议
-
-如果你在自动化流程里调用该工具，建议按如下约定使用：
-
-- 入口始终是单文件路径，例如：
-  - `md-preview notes.md`
-  - `md-preview --watch=false notes.md`
-- 只要解析路径合法并成功启动预览，进程会持续运行直到窗口关闭；若参数或文件异常则快速返回非零退出码并输出错误。
-- 当需要”可重复行为”时，优先使用 `--watch=false`。
-- 不需要关注前端开发环境端口、浏览器地址或本地 HTTP 服务。
-
-### 常见错误
-
-- `file does not exist`：文件路径不存在或权限不足。
-- `expected a Markdown file, got directory`：传入的是目录而非文件。
-- `unsupported file extension`：请使用 `.md` 或 `.markdown`。
+遇到问题，请[提交 Issue](https://github.com/yangjh-xbmu/md-preview/issues)，附上系统、应用版本、复现步骤和最小 Markdown 示例。分享前请移除文档中的私人信息。
 
 ## 开发
 
+使用 Go、Wails、React 和 Tailwind 构建。Markdown 渲染基于 goldmark，HTML 清理使用 bluemonday。
+
+需要 Go、Node.js 和 Wails CLI，以及对应平台的 Wails 构建依赖。仓库发布流程使用 Go 1.24.4、Node.js 20 和 Wails 2.12.0。
+
 ```bash
+npm --prefix frontend ci
 wails dev
 ```
 
-前端依赖与构建：
+构建与测试：
 
 ```bash
-cd frontend
-npm install
-npm run build
+npm --prefix frontend run build
+go test ./...
+wails build
 ```
 
-## 版本发布
-
-通过 Git tag 触发 GitHub Actions 自动化构建三平台二进制包：
-
-```bash
-git tag v0.0.1
-git push origin v0.0.1
-```
-
-构建产物（Windows x64 .exe / macOS Intel & Apple Silicon / Linux x64）自动附到 GitHub Release。
+构建产物位于 `build/bin/`。开发细节与浏览器回归命令见 [CLAUDE.md](CLAUDE.md)。推送 `vX.Y.Z` 格式的标签会触发三平台构建，并将四个发布包上传到 GitHub Releases。
 
 ## 许可
 
-MIT 或 Apache 2.0（二选一可自行补充到发布说明）
+项目许可证待维护者确定。第三方依赖遵循各自的许可证。
