@@ -19,7 +19,7 @@
 - `frontend/src/mermaid-shim.d.ts`: Mermaid 11 自带类型依赖 TS 5+ 语法，项目通过 `tsconfig.json` 的 `paths` 指向本地 shim，跳过 `node_modules/mermaid` 类型加载，避免拉入 `@types/d3-dispatch` 的语法错误。
 - `frontend/src/keyboard.ts`: 纯快捷键判断。`F11` 与 macOS `Option+F11` 切换原生全屏，精确 `Ctrl+Q` 调用 Wails `Quit` 退出应用；谓词测试位于 `frontend/tests/keyboard.test.ts`。
 - `frontend/src/style.css`: Tailwind 入口。
-- `frontend/src/App.css`: 渲染内容细节样式。
+- `frontend/src/App.css`: 渲染内容细节样式。清除 Prism 运算符、实体、URL 和 CSS 字符串的默认半透明白底，使其背景与代码块主题一致。
 - `wails.json`: 前端构建和前端文件服务配置。
 
 ## 验证命令
@@ -34,6 +34,9 @@ wails dev
 wails build
 npm --prefix frontend install
 npm --prefix frontend run build
+# With the Vite server running at http://127.0.0.1:5173:
+playwright-cli open http://127.0.0.1:5173
+playwright-cli run-code --filename=frontend/tests/code-theme.browser.js
 ```
 
 ## 约束

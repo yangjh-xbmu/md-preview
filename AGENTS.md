@@ -21,7 +21,7 @@ The CLI validates one `.md` or `.markdown` file, starts the Wails desktop app, r
 | Area | File | Purpose |
 | --- | --- | --- |
 | CLI entry | `main.go` | Argument parsing, file validation, compatibility flags, Wails app startup |
-| Preview styles | `frontend/src/App.css` | Desktop shell, Markdown content, footnotes, themes, print and frontmatter styling |
+| Preview styles | `frontend/src/App.css` | Desktop shell, Markdown content, footnotes, themes, transparent syntax token backgrounds, print and frontmatter styling |
 | Desktop backend | `app.go` | Wails binding, Markdown rendering, footnote and KaTeX sanitization, file watching, export and print actions |
 | Local image assets | `local_assets.go` | Relative image resolution, opaque resource IDs, allowlisted Wails asset responses |
 | Frontend shell | `frontend/src/App.tsx` | Preview state, shortcuts, Wiki history, external-link routing, menus and document actions |

@@ -1,5 +1,5 @@
 /* INPUT: Rendered Markdown HTML, frontmatter view, preview shell theme classes. */
-/* OUTPUT: Desktop preview layout, markdown theme styling, footnote and frontmatter presentation. */
+/* OUTPUT: Desktop preview layout, theme-consistent syntax backgrounds, footnote and frontmatter presentation. */
 /* POS: Main stylesheet for the Wails React preview surface. */
 
 .md-preview-root {
@@ -408,6 +408,15 @@
 .markdown-body pre,
 .markdown-body code {
   font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+}
+
+/* Keep Prism's default translucent white backgrounds off themed code blocks. */
+.markdown-body .token.operator,
+.markdown-body .token.entity,
+.markdown-body .token.url,
+.markdown-body .language-css .token.string,
+.markdown-body .style .token.string {
+  background: transparent;
 }
 
 .markdown-body .token.tag {
